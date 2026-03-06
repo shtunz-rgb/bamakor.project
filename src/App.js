@@ -140,3 +140,14 @@ function App() {
           <div className="p-5 bg-indigo-700 text-white flex justify-between items-center">
             <h2 className="text-xl font-bold">{selectedSettlement?.name}</h2>
             <button onClick={() => setIsSidebarOpen(false)} className="text-2xl">✕</button>
+          </div>
+          <div className="p-4 overflow-y-auto">
+            <p className="text-sm text-slate-600 italic mb-4">רשימת אישים תופיע כאן...</p>
+          </div>
+        </aside>
+      </main>
+    </div>
+  );
+}
+
+export default App;
