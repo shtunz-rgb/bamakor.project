@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { customLocations } from './locations';
 
 
 const SUPABASE_URL = 'https://jbbyzzybclrpxpdledic.supabase.co';
