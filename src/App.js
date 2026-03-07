@@ -375,29 +375,33 @@ coord: row.coord ? row.coord.value : null // Coordinate point e.g. "Point(34.8 3
 
 
 // Enrichment and SURGICAL GEOGRAPHIC FILTERING
-enrichedTop50 = top50.map(p => ({
-...p,
-...wikiMap[p.wikidata_id]
-})).filter(p => {
-// If we have coordinates from Wikidata, verify they are within Israel's bounding box
-if (p.coord) {
-const match = p.coord.match(/Point\(([-\d.]+) ([-\d.]+)\)/);
-if (match) {
-const lng = parseFloat(match[1]);
-const lat = parseFloat(match[2]);
-
-// Israel Boundary Check: Lat 29.5 to 33.5, Lng 34.2 to 35.9
-const isInsideIsrael = (lat >= 29.5 && lat <= 33.5) && (lng >= 34.2 && lng <= 35.9);
-
-// If person is clearly outside Israel, filter them out (prevents global namesakes)
-if (!isInsideIsrael) return false;
-}
-}
-return true;
+enrichedTop50 = top50.map(p => {
+  // חישוב הדירוג החדש (score) המבוסס על נתוני ה-DB
+  const score = Math.round(((p.num_wiki_languages || 0) * 0.3) + (((p.wikipage_wordcount || 0) / 100) * 0.7));
+  
+  return {
+    ...p,
+    ...wikiMap[p.wikidata_id],
+    score: score // הזרקת הציון לאובייקט
+  };
+}).filter(p => {
+  // לוגיקת הסינון הגיאוגרפי הקיימת שלך (אל תשנה אותה)
+  if (p.coord) {
+    const match = p.coord.match(/Point\(([-\d.]+) ([-\d.]+)\)/);
+    if (match) {
+      const lng = parseFloat(match[1]);
+      const lat = parseFloat(match[2]);
+      const isInsideIsrael = (lat >= 29.5 && lat <= 33.5) && (lng >= 34.2 && lng <= 35.9);
+      if (!isInsideIsrael) return false;
+    }
+  }
+  return true;
 }).sort((a, b) => {
-if (a.id === highlightedPersonId) return -1;
-if (b.id === highlightedPersonId) return 1;
-return (b.popularity || 0) - (a.popularity || 0);
+  // תעדוף האדם שנבחר בחיפוש
+  if (a.id === highlightedPersonId) return -1;
+  if (b.id === highlightedPersonId) return 1;
+  // מיון לפי הציון החדש במקום לפי popularity
+  return (b.score || 0) - (a.score || 0);
 });
 }
 
