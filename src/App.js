@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { customLocations } from './locations';
 
-
-const SUPABASE_URL = 'https://jbbyzzybclrpxpdledic.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpiYnl6enliY2xycHhwZGxlZGljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkxMDQ4NjYsImV4cCI6MjA4NDY4MDg2Nn0.ntsDu_3t4cw135XUVrw_dwqBAbsKr1Rp0U6UaqvM7iU';
-
+const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
+const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 const PROJECT_NAME = "במקור.פרוג׳קט";
 const VERSION = "V.7.13 (Armageddon Update)";
