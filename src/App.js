@@ -5,7 +5,7 @@ const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 const PROJECT_NAME = "במקור.פרוג׳קט";
-const VERSION = "V.7.13 (Armageddon Update)";
+const VERSION = "V.7.14";
 
 const App = () => {
 const [searchQuery, setSearchQuery] = useState('');
@@ -182,7 +182,7 @@ let matchedPersons = [];
 if (supabaseClient) {
 const { data } = await supabaseClient
 .from('persons')
-.select('id, full_name, wikidata_id, birth_place_raw, birth_place_by_wikidata')
+.select('id, full_name, wikidata_id, birth_place_raw, birth_place_by_wikidata, num_wiki_languages, wikipage_wordcount')
 .ilike('full_name', `%${query}%`)
 .limit(5);
 
@@ -544,7 +544,7 @@ onClick={() => p.wiki_url && window.open(p.wiki_url, '_blank')}
 <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl bg-slate-200 text-slate-400">{p.full_name?.[0]}</div>
 )}
 <div className="absolute -bottom-1 -right-1 bg-amber-400 text-white text-[9px] px-1.5 py-0.5 rounded-lg border-2 border-white font-black shadow-sm">
-{p.popularity || 0}
+{p.score || 0}
 </div>
 </div>
 
