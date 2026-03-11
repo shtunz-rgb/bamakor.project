@@ -279,7 +279,7 @@ const App = () => {
 
       const orConditions = searchTerms.flatMap(term => [
         `birth_place_raw.ilike.%${term}%`,
-        `birth_place_by_wikidata.ilike.%${term}%`
+        `and(birth_place_raw.is.null,birth_place_by_wikidata.ilike.%${term}%)`
       ]).join(',');
 
       const { data: dbData } = await supabaseClient
@@ -293,15 +293,13 @@ const App = () => {
         return;
       }
 
-      let workingList = [...dbData];
+      const calcScore = p => Math.round(((p.num_wiki_languages || 0) * 0.3) + (((p.wikipage_wordcount || 0) / 100) * 0.7));
 
-      if (highlightedPersonId) {
-        const highlightedIndex = workingList.findIndex(p => p.id === highlightedPersonId);
-        if (highlightedIndex > -1) {
-          const [highlightedPerson] = workingList.splice(highlightedIndex, 1);
-          workingList.unshift(highlightedPerson);
-        }
-      }
+      let workingList = [...dbData].sort((a, b) => {
+        if (a.id === highlightedPersonId) return -1;
+        if (b.id === highlightedPersonId) return 1;
+        return calcScore(b) - calcScore(a);
+      });
 
       const top50 = workingList.slice(0, 50);
       const others = workingList.slice(50);
@@ -340,7 +338,7 @@ const App = () => {
 
         // Enrichment + geographic filtering
         enrichedTop50 = top50.map(p => {
-          const score = Math.round(((p.num_wiki_languages || 0) * 0.3) + (((p.wikipage_wordcount || 0) / 100) * 0.7));
+          const score = calcScore(p);
           return {
             ...p,
             ...wikiMap[p.wikidata_id],
