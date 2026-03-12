@@ -345,7 +345,7 @@ const App = () => {
           };
         });
 
-        // Enrichment + geographic filtering
+        // Enrichment
         enrichedTop50 = top50.map(p => {
           const score = calcScore(p);
           return {
@@ -353,17 +353,6 @@ const App = () => {
             ...wikiMap[p.wikidata_id],
             score
           };
-        }).filter(p => {
-          if (p.coord) {
-            const match = p.coord.match(/Point\(([-\d.]+) ([-\d.]+)\)/);
-            if (match) {
-              const lng = parseFloat(match[1]);
-              const lat = parseFloat(match[2]);
-              const isInsideIsrael = (lat >= 29.5 && lat <= 33.5) && (lng >= 34.2 && lng <= 35.9);
-              if (!isInsideIsrael) return false;
-            }
-          }
-          return true;
         }).sort((a, b) => {
           if (a.id === highlightedPersonId) return -1;
           if (b.id === highlightedPersonId) return 1;
