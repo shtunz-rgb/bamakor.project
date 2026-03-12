@@ -277,15 +277,24 @@ const App = () => {
         searchTerms.push(baseName);
       }
 
-      const orConditions = searchTerms.flatMap(term => [
-        `birth_place_raw.ilike.%${term}%`,
-        `and(birth_place_raw.is.null,birth_place_by_wikidata.ilike.%${term}%)`
-      ]).join(',');
-
-      const { data: dbData } = await supabaseClient
+      const rawConditions = searchTerms.map(t => `birth_place_raw.ilike.%${t}%`).join(',');
+      const { data: rawData } = await supabaseClient
         .from('persons')
         .select('*')
-        .or(orConditions);
+        .or(rawConditions);
+
+      const wikidataConditions = searchTerms.map(t => `birth_place_by_wikidata.ilike.%${t}%`).join(',');
+      const { data: wikidataData } = await supabaseClient
+        .from('persons')
+        .select('*')
+        .is('birth_place_raw', null)
+        .or(wikidataConditions);
+
+      const seenIds = new Set((rawData || []).map(p => p.id));
+      const dbData = [
+        ...(rawData || []),
+        ...(wikidataData || []).filter(p => !seenIds.has(p.id))
+      ];
 
       if (!dbData || dbData.length === 0) {
         setPeople([]);
