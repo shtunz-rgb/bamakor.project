@@ -281,14 +281,20 @@ const App = () => {
       const { data: rawData } = await supabaseClient
         .from('persons')
         .select('*')
-        .or(rawConditions);
+        .or(rawConditions)
+        .order('num_wiki_languages', { ascending: false })
+        .order('wikipage_wordcount', { ascending: false })
+        .limit(5000);
 
       const wikidataConditions = searchTerms.map(t => `birth_place_by_wikidata.ilike.%${t}%`).join(',');
       const { data: wikidataData } = await supabaseClient
         .from('persons')
         .select('*')
         .is('birth_place_raw', null)
-        .or(wikidataConditions);
+        .or(wikidataConditions)
+        .order('num_wiki_languages', { ascending: false })
+        .order('wikipage_wordcount', { ascending: false })
+        .limit(5000);
 
       const seenIds = new Set((rawData || []).map(p => p.id));
       const dbData = [
