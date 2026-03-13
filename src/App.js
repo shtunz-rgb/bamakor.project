@@ -296,10 +296,16 @@ const App = () => {
         .order('wikipage_wordcount', { ascending: false })
         .limit(5000);
 
+      const wordBoundary = (value, term) => {
+        if (!value) return false;
+        const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        return new RegExp(`(^|[\\s,])${escaped}([\\s,]|$)`).test(value);
+      };
+
       const seenIds = new Set((rawData || []).map(p => p.id));
       const dbData = [
-        ...(rawData || []),
-        ...(wikidataData || []).filter(p => !seenIds.has(p.id))
+        ...(rawData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_raw, t))),
+        ...(wikidataData || []).filter(p => !seenIds.has(p.id) && searchTerms.some(t => wordBoundary(p.birth_place_by_wikidata, t)))
       ];
 
       if (!dbData || dbData.length === 0) {
