@@ -72,6 +72,25 @@ const App = () => {
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
 
+    // Dynamic location marker (not in customLocations, e.g. Buenos Aires)
+    const isDynamicSelected = selectedSettlement && !customLocations.find(s => s.id === selectedSettlement.id);
+    if (isDynamicSelected) {
+      const rippleIcon = L.divIcon({
+        className: 'ripple-wrapper',
+        html: '<div class="ripple-effect"></div>',
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
+      });
+      markersRef.current.push(
+        L.marker([selectedSettlement.lat, selectedSettlement.lng], { icon: rippleIcon, interactive: false }).addTo(leafletMapRef.current)
+      );
+      markersRef.current.push(
+        L.circleMarker([selectedSettlement.lat, selectedSettlement.lng], {
+          radius: 9, fillColor: '#4f46e5', color: '#fff', weight: 2, fillOpacity: 0.9, interactive: false, zIndexOffset: 1000
+        }).addTo(leafletMapRef.current)
+      );
+    }
+
     customLocations.forEach(s => {
       const isSelected = selectedSettlement && s.id === selectedSettlement.id;
 
@@ -266,46 +285,64 @@ const App = () => {
     setIsLoading(true);
 
     try {
-      const searchTerms = [settlement.name];
+      const isDynamic = !settlement.id;
 
-      if (settlement.name.includes('-')) {
-        searchTerms.push(settlement.name.split('-')[0]);
+      let rawData, wikidataData;
+
+      if (isDynamic) {
+        // Dynamic location (e.g. "בואנוס איירס, ארגנטינה"): use exact match to avoid
+        // comma-in-name breaking the PostgREST or() separator
+        const base = { ascending: false };
+        ({ data: rawData } = await supabaseClient
+          .from('persons').select('*')
+          .eq('birth_place_raw', settlement.name)
+          .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000));
+
+        ({ data: wikidataData } = await supabaseClient
+          .from('persons').select('*')
+          .is('birth_place_raw', null)
+          .eq('birth_place_by_wikidata', settlement.name)
+          .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000));
+
+      } else {
+        // Hardcoded location: use ilike with word-boundary filtering
+        const searchTerms = [settlement.name];
+
+        if (settlement.name.includes('-')) {
+          searchTerms.push(settlement.name.split('-')[0]);
+        }
+        if (settlement.name.startsWith('קריית ') || settlement.name.startsWith('קרית ')) {
+          searchTerms.push(settlement.name.replace(/^קרית\s|^קריית\s/, ''));
+        }
+
+        const wordBoundary = (value, term) => {
+          if (!value) return false;
+          const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          return new RegExp(`(^|[\\s,])${escaped}([\\s,]|$)`).test(value);
+        };
+
+        const base = { ascending: false };
+        const rawConditions = searchTerms.map(t => `birth_place_raw.ilike.%${t}%`).join(',');
+        ({ data: rawData } = await supabaseClient
+          .from('persons').select('*')
+          .or(rawConditions)
+          .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000));
+
+        const wikidataConditions = searchTerms.map(t => `birth_place_by_wikidata.ilike.%${t}%`).join(',');
+        ({ data: wikidataData } = await supabaseClient
+          .from('persons').select('*')
+          .is('birth_place_raw', null)
+          .or(wikidataConditions)
+          .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000));
+
+        rawData = (rawData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_raw, t)));
+        wikidataData = (wikidataData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_by_wikidata, t)));
       }
-
-      if (settlement.name.startsWith('קריית ') || settlement.name.startsWith('קרית ')) {
-        const baseName = settlement.name.replace(/^קרית\s|^קריית\s/, '');
-        searchTerms.push(baseName);
-      }
-
-      const rawConditions = searchTerms.map(t => `birth_place_raw.ilike.%${t}%`).join(',');
-      const { data: rawData } = await supabaseClient
-        .from('persons')
-        .select('*')
-        .or(rawConditions)
-        .order('num_wiki_languages', { ascending: false })
-        .order('wikipage_wordcount', { ascending: false })
-        .limit(5000);
-
-      const wikidataConditions = searchTerms.map(t => `birth_place_by_wikidata.ilike.%${t}%`).join(',');
-      const { data: wikidataData } = await supabaseClient
-        .from('persons')
-        .select('*')
-        .is('birth_place_raw', null)
-        .or(wikidataConditions)
-        .order('num_wiki_languages', { ascending: false })
-        .order('wikipage_wordcount', { ascending: false })
-        .limit(5000);
-
-      const wordBoundary = (value, term) => {
-        if (!value) return false;
-        const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        return new RegExp(`(^|[\\s,])${escaped}([\\s,]|$)`).test(value);
-      };
 
       const seenIds = new Set((rawData || []).map(p => p.id));
       const dbData = [
-        ...(rawData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_raw, t))),
-        ...(wikidataData || []).filter(p => !seenIds.has(p.id) && searchTerms.some(t => wordBoundary(p.birth_place_by_wikidata, t)))
+        ...(rawData || []),
+        ...(wikidataData || []).filter(p => !seenIds.has(p.id))
       ];
 
       if (!dbData || dbData.length === 0) {
