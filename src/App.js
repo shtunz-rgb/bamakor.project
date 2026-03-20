@@ -420,7 +420,7 @@ const App = () => {
 
   useEffect(() => {
     if (selectedSettlement) fetchPeople(selectedSettlement);
-  }, [selectedSettlement]);
+  }, [selectedSettlement, highlightedPersonId]);
 
 
   useEffect(() => {
