@@ -43,7 +43,7 @@ const App = () => {
       script.async = true;
       script.onload = () => {
         const L = window.L;
-        const map = L.map(mapRef.current, { zoomControl: false, scrollWheelZoom: true }).setView([31.7, 35.0], 9);
+        const map = L.map(mapRef.current, { zoomControl: false, scrollWheelZoom: true, tap: false, bounceAtZoomLimits: false }).setView([31.7, 35.0], 9);
         leafletMapRef.current = map;
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -105,8 +105,9 @@ const App = () => {
         markersRef.current.push(rippleMarker);
       }
 
+      const isMobile = L.Browser.mobile;
       const marker = L.circleMarker([s.lat, s.lng], {
-        radius: isSelected ? 9 : 7,
+        radius: isSelected ? (isMobile ? 14 : 9) : (isMobile ? 12 : 7),
         fillColor: '#4f46e5',
         color: '#fff',
         weight: 2,
@@ -120,12 +121,14 @@ const App = () => {
         handleSettlementSelection(s);
       });
 
-      marker.bindTooltip(s.name, {
-        direction: 'auto',
-        sticky: true,
-        className: 'custom-tooltip',
-        opacity: 1
-      });
+      if (!L.Browser.mobile) {
+        marker.bindTooltip(s.name, {
+          direction: 'auto',
+          sticky: true,
+          className: 'custom-tooltip',
+          opacity: 1
+        });
+      }
 
       markersRef.current.push(marker);
     });
@@ -436,13 +439,13 @@ const App = () => {
 
 
   return (
-    <div className="h-screen w-full flex flex-col bg-slate-50 font-sans text-slate-900 overflow-hidden" dir="rtl">
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap justify-between items-center z-30 shadow-sm gap-4">
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="bg-indigo-600 text-white p-2 rounded-lg font-black text-sm">{PROJECT_NAME}</div>
+    <div className="h-[100dvh] w-full flex flex-col bg-slate-50 font-sans text-slate-900 overflow-hidden" dir="rtl">
+      <header className="bg-white border-b border-slate-200 px-3 py-2 sm:px-6 sm:py-4 flex flex-wrap justify-between items-center z-30 shadow-sm gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <div className="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-lg font-black text-xs sm:text-sm">{PROJECT_NAME}</div>
           <div className="flex flex-col">
-            <h1 className="text-xl font-bold text-slate-800 leading-none">מפת האישים</h1>
-            <span className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">
+            <h1 className="text-base sm:text-xl font-bold text-slate-800 leading-none">מפת האישים</h1>
+            <span className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5 sm:mt-1">
               {customLocations.length} יישובים
             </span>
           </div>
@@ -453,7 +456,7 @@ const App = () => {
             <input
               type="text"
               placeholder="חפש יישוב או אדם..."
-              className={`w-full bg-slate-100 border-2 rounded-full py-2 px-10 text-sm transition-all outline-none text-right ${searchError ? 'border-red-500 shake' : 'border-transparent focus:ring-2 focus:ring-indigo-500 bg-white shadow-inner'}`}
+              className={`w-full bg-slate-100 border-2 rounded-full py-2 px-10 text-[16px] sm:text-sm transition-all outline-none text-right ${searchError ? 'border-red-500 shake' : 'border-transparent focus:ring-2 focus:ring-indigo-500 bg-white shadow-inner'}`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -499,19 +502,19 @@ const App = () => {
       <div className="flex-1 relative flex">
         <div ref={mapRef} className="flex-1 z-0" />
 
-        <aside className={`absolute right-0 top-0 bottom-0 w-80 md:w-96 bg-white shadow-2xl z-20 transition-all duration-500 border-l border-slate-200 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <aside className={`absolute right-0 top-0 bottom-0 w-full sm:w-80 md:w-96 bg-white shadow-2xl z-20 transition-all duration-500 border-l border-slate-200 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
           <div className="h-full flex flex-col">
             <div className="p-5 border-b border-slate-100 flex flex-col justify-center bg-indigo-700 text-white shadow-lg shrink-0 relative">
               <div className="flex justify-between items-start mb-2">
                 <h2 className="text-xl font-bold leading-tight truncate pl-8">{selectedSettlement?.name}</h2>
-                <button onClick={() => setIsSidebarOpen(false)} className="absolute top-4 left-4 hover:bg-white/20 p-2 rounded-full leading-none transition-all">✕</button>
+                <button onClick={() => setIsSidebarOpen(false)} className="absolute top-3 left-3 hover:bg-white/20 w-11 h-11 flex items-center justify-center rounded-full leading-none transition-all text-lg">✕</button>
               </div>
               <div className="text-[11px] opacity-90 leading-relaxed bg-white/10 p-2 rounded-lg border border-white/10 italic">
                 {settlementSummary || 'טוען נתונים...'}
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-100">
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-100 overscroll-contain">
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 text-indigo-600">
                   <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -579,7 +582,7 @@ const App = () => {
         .custom-tooltip { background: #1e293b; color: white; border-radius: 4px; padding: 2px 8px; font-weight: bold; border: none; }
         @keyframes spotlightPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
         .spotlight-pulse { animation: spotlightPulse 1.5s infinite ease-in-out; }
-        .custom-scrollbar { scrollbar-width: thin; }
+        .custom-scrollbar { scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
         .custom-scrollbar::-webkit-scrollbar { width: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
