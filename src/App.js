@@ -443,7 +443,7 @@ const App = () => {
       <header className="bg-white border-b border-slate-200 px-3 py-2 sm:px-6 sm:py-4 flex flex-wrap justify-between items-center z-30 shadow-sm gap-2 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-lg font-black text-xs sm:text-sm">{PROJECT_NAME}</div>
-          <div className="flex flex-col">
+          <div className="hidden sm:flex flex-col">
             <h1 className="text-base sm:text-xl font-bold text-slate-800 leading-none">מפת האישים</h1>
             <span className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5 sm:mt-1">
               {customLocations.length} יישובים
