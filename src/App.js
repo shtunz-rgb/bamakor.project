@@ -7,6 +7,9 @@ const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 const PROJECT_NAME = "במקור.פרוג׳קט";
 
+// Normalize apostrophe variants to Hebrew Geresh (U+05F3) so search matches DB values
+const normalizeQuery = (q) => q.replace(/['\u2019\u02BC]/g, '\u05F3');
+
 const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -168,7 +171,7 @@ const App = () => {
 
   useEffect(() => {
     const fetchSuggestions = async () => {
-      const query = searchQuery.trim();
+      const query = normalizeQuery(searchQuery.trim());
       if (query.length < 2) {
         setSuggestions([]);
         return;
@@ -225,7 +228,7 @@ const App = () => {
 
   const handleSearchSubmit = async (e, forcedItem = null) => {
     if (e) e.preventDefault();
-    const query = forcedItem ? forcedItem.name : searchQuery.trim();
+    const query = normalizeQuery(forcedItem ? forcedItem.name : searchQuery.trim());
     if (!query) return;
 
     setSuggestions([]);
