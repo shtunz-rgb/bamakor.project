@@ -7,8 +7,9 @@ const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
 
 const PROJECT_NAME = "במקור.פרוג׳קט";
 
-// Normalize apostrophe variants to Hebrew Geresh (U+05F3) so search matches DB values
-const normalizeQuery = (q) => q.replace(/['\u2019\u02BC]/g, '\u05F3');
+// Replace apostrophe variants with SQL single-char wildcard (_) for ilike queries,
+// so the search matches regardless of which apostrophe character the DB stores.
+const normalizeQuery = (q) => q.replace(/['\u2019\u02BC\u05F3]/g, '_');
 
 const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
