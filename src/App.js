@@ -319,7 +319,8 @@ const App = () => {
           searchTerms.push(settlement.name.split('-')[0]);
         }
         if (settlement.name.startsWith('קריית ') || settlement.name.startsWith('קרית ')) {
-          searchTerms.push(settlement.name.replace(/^קרית\s|^קריית\s/, ''));
+          const stripped = settlement.name.replace(/^קרית\s|^קריית\s/, '');
+          if (stripped.length >= 3) searchTerms.push(stripped);
         }
 
         const wordBoundary = (value, term) => {
