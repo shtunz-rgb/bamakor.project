@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { customLocations } from './locations';
+import { BIRTH_PLACE_EXCLUSIONS } from './exclusions';
 
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
@@ -343,8 +344,11 @@ const App = () => {
           .or(wikidataConditions)
           .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000));
 
-        rawData = (rawData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_raw, t)));
-        wikidataData = (wikidataData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_by_wikidata, t)));
+        const exclusions = BIRTH_PLACE_EXCLUSIONS[settlement.name] || [];
+        const notExcluded = (value) => !exclusions.some(ex => (value || '').includes(ex));
+
+        rawData = (rawData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_raw, t)) && notExcluded(p.birth_place_raw));
+        wikidataData = (wikidataData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_by_wikidata, t)) && notExcluded(p.birth_place_by_wikidata));
       }
 
       const seenIds = new Set((rawData || []).map(p => p.id));
