@@ -347,8 +347,18 @@ const App = () => {
         const exclusions = BIRTH_PLACE_EXCLUSIONS[settlement.name] || [];
         const notExcluded = (value) => !exclusions.some(ex => (value || '').includes(ex));
 
-        rawData = (rawData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_raw, t)) && notExcluded(p.birth_place_raw));
-        wikidataData = (wikidataData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_by_wikidata, t)) && notExcluded(p.birth_place_by_wikidata));
+        // Exclude persons who belong to a more-specific settlement whose name
+        // contains our settlement's name (e.g. exclude "גן יבנה" results when
+        // searching for "יבנה"). Skip hyphen-variants (e.g. "תל אביב-יפו").
+        const moreSpecific = customLocations.filter(s =>
+          s.id !== settlement.id &&
+          s.name.includes(settlement.name) &&
+          !s.name.startsWith(settlement.name + '-')
+        );
+        const notMoreSpecific = (value) => !moreSpecific.some(s => wordBoundary(value, s.name));
+
+        rawData = (rawData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_raw, t)) && notExcluded(p.birth_place_raw) && notMoreSpecific(p.birth_place_raw));
+        wikidataData = (wikidataData || []).filter(p => searchTerms.some(t => wordBoundary(p.birth_place_by_wikidata, t)) && notExcluded(p.birth_place_by_wikidata) && notMoreSpecific(p.birth_place_by_wikidata));
       }
 
       const seenIds = new Set((rawData || []).map(p => p.id));
