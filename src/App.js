@@ -12,11 +12,30 @@ const PROJECT_NAME = "במקור.פרוג׳קט";
 // so the search matches regardless of which apostrophe character the DB stores.
 const normalizeQuery = (q) => q.replace(/['\u2019\u02BC\u05F3]/g, '_');
 
+const ONBOARDING_KEY = 'bamakor_onboarding_done';
+
+const ONBOARDING_SLIDES = [
+  {
+    title: 'ברוכים הבאים לבמקור.פרוג׳קט',
+    body: 'מאגר האישים הגדול ביותר על המפה — גלו היכן נולדו אישים ידועים מישראל ומהעולם. כל אישיות מדורגת לפי מדד העוצמה הוויקיפדי: שילוב של מספר שפות הוויקיפדיה שבהן מופיע הערך ואורכו. לחיצה על כל אישיות תפנה ישירות לדף הוויקיפדיה שלה.',
+  },
+  {
+    title: 'איך מחפשים?',
+    body: 'הקלידו שם של אישיות או שם יישוב בתיבת החיפוש שבראש המסך. בחרו מהתוצאות המוצעות — אם חיפשתם אישיות, המפה תנווט ישירות אל עיר הלידה שלה ותציג אותה בראש הרשימה. אם חיפשתם יישוב, תיפתח רשימת האישים שנולדו בו.',
+  },
+  {
+    title: 'שימוש במפה',
+    body: 'כל נקודה על המפה מייצגת יישוב הכלול במאגר. לחצו על כל נקודה כדי לפתוח את רשימת האישים שנולדו בה, מדורגים מהפופולרי ביותר לפחות פופולרי לפי מדד העוצמה הוויקיפדי.',
+  },
+];
+
 const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [searchError, setSearchError] = useState(false);
   const [selectedSettlement, setSelectedSettlement] = useState(null);
+  const [showOnboarding, setShowOnboarding] = useState(() => !localStorage.getItem(ONBOARDING_KEY));
+  const [onboardingStep, setOnboardingStep] = useState(0);
   const [settlementSummary, setSettlementSummary] = useState('');
   const [people, setPeople] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -457,8 +476,57 @@ const App = () => {
   }, [isLoading, highlightedPersonId, people]);
 
 
+  const closeOnboarding = () => {
+    localStorage.setItem(ONBOARDING_KEY, '1');
+    setShowOnboarding(false);
+    setOnboardingStep(0);
+  };
+
+  const openOnboarding = () => {
+    setOnboardingStep(0);
+    setShowOnboarding(true);
+  };
+
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-slate-50 font-sans text-slate-900 overflow-hidden" dir="rtl">
+
+      {/* ── Onboarding Modal ──────────────────────────────────────────────── */}
+      {showOnboarding && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4" onClick={closeOnboarding}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 flex flex-col gap-6 relative" onClick={e => e.stopPropagation()}>
+            {/* Close */}
+            <button onClick={closeOnboarding} className="absolute top-4 left-4 w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 transition-all text-lg">✕</button>
+
+            {/* Step indicator */}
+            <div className="flex justify-center gap-2 mt-1">
+              {ONBOARDING_SLIDES.map((_, i) => (
+                <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === onboardingStep ? 'w-6 bg-indigo-600' : 'w-2 bg-slate-200'}`} />
+              ))}
+            </div>
+
+            {/* Content */}
+            <div className="flex flex-col gap-3 min-h-[140px]">
+              <h2 className="text-xl font-black text-slate-800 leading-snug">{ONBOARDING_SLIDES[onboardingStep].title}</h2>
+              <p className="text-sm text-slate-600 leading-relaxed">{ONBOARDING_SLIDES[onboardingStep].body}</p>
+            </div>
+
+            {/* Navigation */}
+            <div className="flex justify-between items-center">
+              {onboardingStep > 0 ? (
+                <button onClick={() => setOnboardingStep(s => s - 1)} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">→ הקודם</button>
+              ) : (
+                <button onClick={closeOnboarding} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">דלג</button>
+              )}
+              {onboardingStep < ONBOARDING_SLIDES.length - 1 ? (
+                <button onClick={() => setOnboardingStep(s => s + 1)} className="bg-indigo-600 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-indigo-700 transition-all">הבא ←</button>
+              ) : (
+                <button onClick={closeOnboarding} className="bg-indigo-600 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-indigo-700 transition-all">יאללה נתחיל !</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <header className="bg-white border-b border-slate-200 px-3 py-2 sm:px-6 sm:py-4 flex flex-wrap justify-between items-center z-30 shadow-sm gap-2 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <div className="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-lg font-black text-xs sm:text-sm">{PROJECT_NAME}</div>
@@ -468,6 +536,7 @@ const App = () => {
               {customLocations.length} יישובים
             </span>
           </div>
+          <button onClick={openOnboarding} title="מה זה במקור.פרוג׳קט?" className="w-7 h-7 flex items-center justify-center rounded-full border-2 border-slate-300 text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-all text-xs font-black">?</button>
         </div>
 
         <div className="flex-1 max-w-md relative">
