@@ -44,6 +44,7 @@ const App = () => {
   const mapRef = useRef(null);
   const leafletMapRef = useRef(null);
   const markersRef = useRef([]);
+  const onboardingMarkersRef = useRef([]);
   const personRefs = useRef({});
 
   // Initialize Supabase client once using the installed npm package (no CDN needed)
@@ -487,45 +488,97 @@ const App = () => {
     setShowOnboarding(true);
   };
 
+  // Fly to Tel Aviv and show ripple on slide 3; clean up when leaving
+  useEffect(() => {
+    if (!leafletMapRef.current || !window.L) return;
+    const L = window.L;
+    onboardingMarkersRef.current.forEach(m => m.remove());
+    onboardingMarkersRef.current = [];
+
+    if (showOnboarding && onboardingStep === 2) {
+      const telAviv = customLocations.find(s => s.name.includes('תל אביב'));
+      if (telAviv) {
+        leafletMapRef.current.flyTo([telAviv.lat, telAviv.lng], 12, { duration: 1.5 });
+        const rippleIcon = L.divIcon({ className: 'ripple-wrapper', html: '<div class="ripple-effect"></div>', iconSize: [40, 40], iconAnchor: [20, 20] });
+        onboardingMarkersRef.current.push(
+          L.marker([telAviv.lat, telAviv.lng], { icon: rippleIcon, interactive: false }).addTo(leafletMapRef.current)
+        );
+        onboardingMarkersRef.current.push(
+          L.circleMarker([telAviv.lat, telAviv.lng], {
+            radius: 9, fillColor: '#4f46e5', color: '#fff', weight: 2, fillOpacity: 0.9, interactive: false, zIndexOffset: 1000
+          }).addTo(leafletMapRef.current)
+        );
+      }
+    } else if (!showOnboarding && !selectedSettlement) {
+      leafletMapRef.current.setView([31.7, 35.0], 9);
+    }
+  }, [showOnboarding, onboardingStep]);
+
   return (
     <div className="h-[100dvh] w-full flex flex-col bg-slate-50 font-sans text-slate-900 overflow-hidden" dir="rtl">
 
-      {/* ── Onboarding Modal ──────────────────────────────────────────────── */}
-      {showOnboarding && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4" onClick={closeOnboarding}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 flex flex-col gap-6 relative" onClick={e => e.stopPropagation()}>
-            {/* Close */}
-            <button onClick={closeOnboarding} className="absolute top-4 left-4 w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 transition-all text-lg">✕</button>
+      {/* ── Onboarding ────────────────────────────────────────────────────── */}
+      {showOnboarding && (() => {
+        const navButtons = (
+          <div className="flex justify-between items-center mt-4">
+            {onboardingStep > 0 ? (
+              <button onClick={() => setOnboardingStep(s => s - 1)} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">→ הקודם</button>
+            ) : (
+              <button onClick={closeOnboarding} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">דלג</button>
+            )}
+            {onboardingStep < ONBOARDING_SLIDES.length - 1 ? (
+              <button onClick={() => setOnboardingStep(s => s + 1)} className="bg-indigo-600 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-indigo-700 transition-all">הבא ←</button>
+            ) : (
+              <button onClick={closeOnboarding} className="bg-indigo-600 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-indigo-700 transition-all">יאללה נתחיל !</button>
+            )}
+          </div>
+        );
 
-            {/* Step indicator */}
-            <div className="flex justify-center gap-2 mt-1">
-              {ONBOARDING_SLIDES.map((_, i) => (
-                <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === onboardingStep ? 'w-6 bg-indigo-600' : 'w-2 bg-slate-200'}`} />
-              ))}
-            </div>
+        const dots = (
+          <div className="flex justify-center gap-2">
+            {ONBOARDING_SLIDES.map((_, i) => (
+              <div key={i} className={`h-1.5 rounded-full transition-all duration-300 ${i === onboardingStep ? 'w-6 bg-indigo-600' : 'w-2 bg-slate-200'}`} />
+            ))}
+          </div>
+        );
 
-            {/* Content */}
-            <div className="flex flex-col gap-3 min-h-[140px]">
-              <h2 className="text-xl font-black text-slate-800 leading-snug">{ONBOARDING_SLIDES[onboardingStep].title}</h2>
+        const cardContent = (
+          <>
+            <button onClick={closeOnboarding} className="absolute top-3 left-3 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 transition-all">✕</button>
+            {dots}
+            <div className="flex flex-col gap-2 mt-1">
+              <h2 className="text-lg font-black text-slate-800 leading-snug">{ONBOARDING_SLIDES[onboardingStep].title}</h2>
               <p className="text-sm text-slate-600 leading-relaxed">{ONBOARDING_SLIDES[onboardingStep].body}</p>
             </div>
+            {navButtons}
+          </>
+        );
 
-            {/* Navigation */}
-            <div className="flex justify-between items-center">
-              {onboardingStep > 0 ? (
-                <button onClick={() => setOnboardingStep(s => s - 1)} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">→ הקודם</button>
-              ) : (
-                <button onClick={closeOnboarding} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">דלג</button>
-              )}
-              {onboardingStep < ONBOARDING_SLIDES.length - 1 ? (
-                <button onClick={() => setOnboardingStep(s => s + 1)} className="bg-indigo-600 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-indigo-700 transition-all">הבא ←</button>
-              ) : (
-                <button onClick={closeOnboarding} className="bg-indigo-600 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-indigo-700 transition-all">יאללה נתחיל !</button>
-              )}
+        // Slide 1 — centered with dark overlay
+        if (onboardingStep === 0) return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 px-4" onClick={closeOnboarding}>
+            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 flex flex-col gap-4 relative" onClick={e => e.stopPropagation()}>
+              {cardContent}
             </div>
           </div>
-        </div>
-      )}
+        );
+
+        // Slide 2 — anchored below search bar (left side in RTL), no overlay
+        if (onboardingStep === 1) return (
+          <div className="fixed z-50 top-[62px] sm:top-[72px] left-2 sm:left-6 w-[calc(100%-1rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border-2 border-indigo-300 p-5 flex flex-col gap-3 relative">
+            {/* Caret pointing up toward search bar */}
+            <div className="absolute -top-[9px] left-8 w-4 h-4 bg-white border-r-2 border-t-2 border-indigo-300 rotate-[-45deg]" />
+            {cardContent}
+          </div>
+        );
+
+        // Slide 3 — left side of map (over Mediterranean), no overlay
+        if (onboardingStep === 2) return (
+          <div className="fixed z-50 left-3 sm:left-6 top-1/2 -translate-y-1/2 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border-2 border-indigo-300 p-5 flex flex-col gap-3 relative">
+            {cardContent}
+          </div>
+        );
+      })()}
 
       <header className="bg-white border-b border-slate-200 px-3 py-2 sm:px-6 sm:py-4 flex flex-wrap justify-between items-center z-30 shadow-sm gap-2 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
@@ -544,7 +597,7 @@ const App = () => {
             <input
               type="text"
               placeholder="חפש יישוב או אדם..."
-              className={`w-full bg-slate-100 border-2 rounded-full py-2 px-10 text-[16px] sm:text-sm transition-all outline-none text-right ${searchError ? 'border-red-500 shake' : 'border-transparent focus:ring-2 focus:ring-indigo-500 bg-white shadow-inner'}`}
+              className={`w-full bg-slate-100 border-2 rounded-full py-2 px-10 text-[16px] sm:text-sm transition-all outline-none text-right ${searchError ? 'border-red-500 shake' : (showOnboarding && onboardingStep === 1) ? 'border-indigo-400 ring-4 ring-indigo-200 bg-white shadow-inner animate-pulse' : 'border-transparent focus:ring-2 focus:ring-indigo-500 bg-white shadow-inner'}`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
