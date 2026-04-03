@@ -565,7 +565,7 @@ const App = () => {
 
         // Slide 2 — anchored below search bar (left side in RTL), no overlay
         if (onboardingStep === 1) return (
-          <div className="fixed z-50 top-[62px] sm:top-[72px] left-2 sm:left-6 w-[calc(100%-1rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border-2 border-indigo-300 p-5 flex flex-col gap-3 relative">
+          <div className="fixed z-50 top-[62px] sm:top-[72px] left-2 sm:left-6 w-[calc(100%-1rem)] sm:w-96 bg-white rounded-2xl shadow-2xl border-2 border-indigo-300 p-5 flex flex-col gap-3">
             {/* Caret pointing up toward search bar */}
             <div className="absolute -top-[9px] left-8 w-4 h-4 bg-white border-r-2 border-t-2 border-indigo-300 rotate-[-45deg]" />
             {cardContent}
@@ -574,7 +574,7 @@ const App = () => {
 
         // Slide 3 — left side of map (over Mediterranean), no overlay
         if (onboardingStep === 2) return (
-          <div className="fixed z-50 left-3 sm:left-6 top-1/2 -translate-y-1/2 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border-2 border-indigo-300 p-5 flex flex-col gap-3 relative">
+          <div className="fixed z-50 left-3 sm:left-6 top-1/2 -translate-y-1/2 w-72 sm:w-80 bg-white rounded-2xl shadow-2xl border-2 border-indigo-300 p-5 flex flex-col gap-3">
             {cardContent}
           </div>
         );
