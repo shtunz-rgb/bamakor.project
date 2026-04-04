@@ -582,7 +582,16 @@ const App = () => {
 
       <header className="bg-white border-b border-slate-200 px-3 py-2 sm:px-6 sm:py-4 flex flex-wrap justify-between items-center z-30 shadow-sm gap-2 sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <div className="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-lg font-black text-xs sm:text-sm">{PROJECT_NAME}</div>
+          <button
+            onClick={() => {
+              setSelectedSettlement(null);
+              setIsSidebarOpen(false);
+              setSearchQuery('');
+              setSuggestions([]);
+              if (leafletMapRef.current) leafletMapRef.current.setView([31.7, 35.0], 9);
+            }}
+            className="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-lg font-black text-xs sm:text-sm hover:bg-indigo-700 transition-colors cursor-pointer"
+          >{PROJECT_NAME}</button>
           <div className="hidden sm:flex flex-col">
             <h1 className="text-base sm:text-xl font-bold text-slate-800 leading-none">מפת האישים</h1>
             <span className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5 sm:mt-1">
@@ -601,7 +610,7 @@ const App = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <span className="absolute left-4 top-2.5 text-slate-400">🔍</span>
+            <button type="submit" className="absolute left-4 top-2.5 text-slate-400 hover:text-indigo-500 transition-colors leading-none bg-transparent border-none p-0 cursor-pointer">🔍</button>
 
             {suggestions.length > 0 && (
               <div className="absolute top-full right-0 left-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden z-50">
