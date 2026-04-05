@@ -29,6 +29,10 @@ const ONBOARDING_SLIDES = [
   },
 ];
 
+const calcScore = p => Math.round(((p.num_wiki_languages || 0) * 0.3) + (((p.wikipage_wordcount || 0) / 100) * 0.7));
+
+const BATCH_SIZE = 50;
+
 const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -38,7 +42,9 @@ const App = () => {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [settlementSummary, setSettlementSummary] = useState('');
   const [people, setPeople] = useState([]);
+  const [remainingPeople, setRemainingPeople] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [highlightedPersonId, setHighlightedPersonId] = useState(null);
   const mapRef = useRef(null);
@@ -308,6 +314,37 @@ const App = () => {
   };
 
 
+  const enrichBatch = async (batch) => {
+    const qids = batch.map(p => p.wikidata_id).filter(id => id?.startsWith('Q'));
+    if (qids.length === 0) return batch.map(p => ({ ...p, score: calcScore(p) }));
+    const sparql = `
+      SELECT ?item ?sitelinks ?image ?itemDescription ?coord (YEAR(?birth) AS ?birthYear) WHERE {
+        VALUES ?item { ${qids.map(id => `wd:${id}`).join(' ')} }
+        ?item wikibase:sitelinks ?sitelinks .
+        OPTIONAL { ?item wdt:P18 ?image . }
+        OPTIONAL { ?item wdt:P569 ?birth . }
+        OPTIONAL {
+          ?item wdt:P19 ?birthPlace .
+          ?birthPlace wdt:P625 ?coord .
+        }
+        SERVICE wikibase:label { bd:serviceParam wikibase:language "he,en". }
+      }
+    `;
+    const res = await fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql)}&format=json`);
+    const wikiData = await res.json();
+    const wikiMap = {};
+    wikiData.results.bindings.forEach(row => {
+      wikiMap[row.item.value.split('/').pop()] = {
+        popularity: parseInt(row.sitelinks.value),
+        image: row.image ? row.image.value : null,
+        description: row.itemDescription ? row.itemDescription.value : null,
+        birthYear: row.birthYear ? row.birthYear.value : null,
+        coord: row.coord ? row.coord.value : null,
+      };
+    });
+    return batch.map(p => ({ ...p, ...wikiMap[p.wikidata_id], score: calcScore(p) }));
+  };
+
   const fetchPeople = async (settlement) => {
     if (!supabaseClient) return;
     setIsLoading(true);
@@ -393,65 +430,24 @@ const App = () => {
         return;
       }
 
-      const calcScore = p => Math.round(((p.num_wiki_languages || 0) * 0.3) + (((p.wikipage_wordcount || 0) / 100) * 0.7));
-
-      let workingList = [...dbData].sort((a, b) => {
+      const workingList = [...dbData].sort((a, b) => {
         if (a.id === highlightedPersonId) return -1;
         if (b.id === highlightedPersonId) return 1;
         return calcScore(b) - calcScore(a);
       });
 
-      const top50 = workingList.slice(0, 50);
-      const others = workingList.slice(50);
+      const firstBatch = workingList.slice(0, BATCH_SIZE);
+      const rest = workingList.slice(BATCH_SIZE);
 
-      const qids = top50.map(p => p.wikidata_id).filter(id => id?.startsWith('Q'));
-      let enrichedTop50 = top50;
+      const enriched = await enrichBatch(firstBatch);
+      enriched.sort((a, b) => {
+        if (a.id === highlightedPersonId) return -1;
+        if (b.id === highlightedPersonId) return 1;
+        return (b.score || 0) - (a.score || 0);
+      });
 
-      if (qids.length > 0) {
-        const sparql = `
-          SELECT ?item ?sitelinks ?image ?itemDescription ?coord (YEAR(?birth) AS ?birthYear) WHERE {
-            VALUES ?item { ${qids.map(id => `wd:${id}`).join(' ')} }
-            ?item wikibase:sitelinks ?sitelinks .
-            OPTIONAL { ?item wdt:P18 ?image . }
-            OPTIONAL { ?item wdt:P569 ?birth . }
-            OPTIONAL {
-              ?item wdt:P19 ?birthPlace .
-              ?birthPlace wdt:P625 ?coord .
-            }
-            SERVICE wikibase:label { bd:serviceParam wikibase:language "he,en". }
-          }
-        `;
-
-        const wikiRes = await fetch(`https://query.wikidata.org/sparql?query=${encodeURIComponent(sparql)}&format=json`);
-        const wikiData = await wikiRes.json();
-
-        const wikiMap = {};
-        wikiData.results.bindings.forEach(row => {
-          wikiMap[row.item.value.split('/').pop()] = {
-            popularity: parseInt(row.sitelinks.value),
-            image: row.image ? row.image.value : null,
-            description: row.itemDescription ? row.itemDescription.value : null,
-            birthYear: row.birthYear ? row.birthYear.value : null,
-            coord: row.coord ? row.coord.value : null
-          };
-        });
-
-        // Enrichment
-        enrichedTop50 = top50.map(p => {
-          const score = calcScore(p);
-          return {
-            ...p,
-            ...wikiMap[p.wikidata_id],
-            score
-          };
-        }).sort((a, b) => {
-          if (a.id === highlightedPersonId) return -1;
-          if (b.id === highlightedPersonId) return 1;
-          return (b.score || 0) - (a.score || 0);
-        });
-      }
-
-      setPeople([...enrichedTop50, ...others]);
+      setPeople(enriched);
+      setRemainingPeople(rest);
     } catch (e) {
       console.error("fetchPeople failed:", e);
     } finally {
@@ -486,6 +482,23 @@ const App = () => {
   const openOnboarding = () => {
     setOnboardingStep(0);
     setShowOnboarding(true);
+  };
+
+  const loadMore = async () => {
+    if (isLoadingMore || remainingPeople.length === 0) return;
+    setIsLoadingMore(true);
+    try {
+      const nextBatch = remainingPeople.slice(0, BATCH_SIZE);
+      const rest = remainingPeople.slice(BATCH_SIZE);
+      const enriched = await enrichBatch(nextBatch);
+      enriched.sort((a, b) => (b.score || 0) - (a.score || 0));
+      setPeople(prev => [...prev, ...enriched]);
+      setRemainingPeople(rest);
+    } catch (e) {
+      console.error("loadMore failed:", e);
+    } finally {
+      setIsLoadingMore(false);
+    }
   };
 
   // Fly to Tel Aviv and show ripple on slide 3; clean up when leaving
@@ -711,6 +724,23 @@ const App = () => {
                       </div>
                     );
                   })}
+
+                  {remainingPeople.length > 0 && (
+                    <button
+                      onClick={loadMore}
+                      disabled={isLoadingMore}
+                      className="w-full mt-1 py-3 rounded-2xl font-bold text-sm text-indigo-600 border-2 border-indigo-200 bg-white hover:bg-indigo-50 hover:border-indigo-400 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isLoadingMore ? (
+                        <>
+                          <span className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                          טוען...
+                        </>
+                      ) : (
+                        `טען עוד ${Math.min(remainingPeople.length, BATCH_SIZE)} אישים`
+                      )}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full py-20 text-center opacity-60">
