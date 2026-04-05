@@ -29,7 +29,10 @@ const ONBOARDING_SLIDES = [
   },
 ];
 
-const calcScore = p => Math.round(((p.num_wiki_languages || 0) * 0.3) + (((p.wikipage_wordcount || 0) / 100) * 0.7));
+const calcScore = p => {
+  const base = Math.round(((p.num_wiki_languages || 0) * 0.3) + (((p.wikipage_wordcount || 0) / 100) * 0.7));
+  return (p.num_wiki_languages || 0) >= 80 ? base * 2 : base;
+};
 
 const BATCH_SIZE = 50;
 
