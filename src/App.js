@@ -703,7 +703,7 @@ const App = () => {
                           </div>
                         )}
 
-                        <div className="absolute bottom-0 left-0 px-3 py-1 rounded-br-none rounded-tl-none rounded-tr-md rounded-bl-2xl bg-gradient-to-r from-amber-500 to-amber-400 text-white text-[10px] font-black tracking-wide shadow-sm pointer-events-none z-10" title="ציון פופולריות מבוסס ויקיפדיה">
+                        <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md shadow-sm z-10 bg-gradient-to-r from-amber-500 to-amber-400 text-white text-[9px] font-black tracking-wide border border-white/20 pointer-events-none" title="ציון פופולריות מבוסס ויקיפדיה">
                           {p.score || 0}
                         </div>
 
