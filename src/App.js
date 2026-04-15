@@ -703,15 +703,16 @@ const App = () => {
                           </div>
                         )}
 
+                        <div className="absolute bottom-0 left-0 px-3 py-1 rounded-br-none rounded-tl-none rounded-tr-md rounded-bl-2xl bg-gradient-to-r from-amber-500 to-amber-400 text-white text-[10px] font-black tracking-wide shadow-sm pointer-events-none z-10" title="ציון פופולריות מבוסס ויקיפדיה">
+                          {p.score || 0}
+                        </div>
+
                         <div className="relative shrink-0">
                           {p.image ? (
                             <img src={`${p.image}?width=150`} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm" alt={p.full_name} />
                           ) : (
                             <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl bg-slate-200 text-slate-400">{p.full_name?.[0]}</div>
                           )}
-                          <div className="absolute -bottom-1 -right-1 bg-amber-400 text-white text-[9px] px-1.5 py-0.5 rounded-lg border-2 border-white font-black shadow-sm" title="ציון פופולריות מבוסס ויקיפדיה">
-                            {p.score || 0}
-                          </div>
                         </div>
 
                         <div className="min-w-0 flex-1 pl-2">
