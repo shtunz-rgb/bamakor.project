@@ -688,8 +688,12 @@ const App = () => {
                 </div>
               ) : people.length > 0 ? (
                 <div className="space-y-3">
-                  {people.map((p) => {
+                  {(() => {
+                    const rankMap = {};
+                    [...people].sort((a, b) => (b.score || 0) - (a.score || 0)).forEach((p, i) => { rankMap[p.id] = i + 1; });
+                    return people.map((p) => {
                     const isHighlighted = p.id === highlightedPersonId;
+                    const rank = rankMap[p.id];
                     return (
                       <div
                         key={p.id}
@@ -713,6 +717,9 @@ const App = () => {
                           ) : (
                             <div className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-xl bg-slate-200 text-slate-400">{p.full_name?.[0]}</div>
                           )}
+                          <div className="absolute -bottom-1 -right-1 bg-slate-500 text-white text-[9px] px-1.5 py-0.5 rounded-lg border-2 border-white font-black shadow-sm pointer-events-none" title="דירוג לפי מדד עוצמה">
+                            #{rank}
+                          </div>
                         </div>
 
                         <div className="min-w-0 flex-1 pl-2">
@@ -727,7 +734,8 @@ const App = () => {
                         </div>
                       </div>
                     );
-                  })}
+                  });
+                  })()}
 
                   {remainingPeople.length > 0 && (
                     <button
