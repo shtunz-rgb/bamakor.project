@@ -368,7 +368,7 @@ const App = () => {
 
         ({ data: wikidataData } = await supabaseClient
           .from('persons').select('*')
-          .is('birth_place_raw', null)
+          .or('birth_place_raw.is.null,birth_place_raw.eq.no_bp_in_infobox')
           .eq('birth_place_by_wikidata', settlement.name)
           .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000));
 
@@ -400,7 +400,7 @@ const App = () => {
         const wikidataConditions = searchTerms.map(t => `birth_place_by_wikidata.ilike.%${t}%`).join(',');
         ({ data: wikidataData } = await supabaseClient
           .from('persons').select('*')
-          .is('birth_place_raw', null)
+          .or(`birth_place_raw.is.null,birth_place_raw.eq.no_bp_in_infobox`)
           .or(wikidataConditions)
           .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000));
 
