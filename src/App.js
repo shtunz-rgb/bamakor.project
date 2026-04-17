@@ -46,6 +46,7 @@ const App = () => {
   const [settlementSummary, setSettlementSummary] = useState('');
   const [people, setPeople] = useState([]);
   const [remainingPeople, setRemainingPeople] = useState([]);
+  const [previewPerson, setPreviewPerson] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -433,21 +434,30 @@ const App = () => {
         return;
       }
 
-      const workingList = [...dbData].sort((a, b) => {
-        if (a.id === highlightedPersonId) return -1;
-        if (b.id === highlightedPersonId) return 1;
-        return calcScore(b) - calcScore(a);
-      });
+      const workingList = [...dbData].sort((a, b) => calcScore(b) - calcScore(a));
 
       const firstBatch = workingList.slice(0, BATCH_SIZE);
       const rest = workingList.slice(BATCH_SIZE);
 
       const enriched = await enrichBatch(firstBatch);
-      enriched.sort((a, b) => {
-        if (a.id === highlightedPersonId) return -1;
-        if (b.id === highlightedPersonId) return 1;
-        return (b.score || 0) - (a.score || 0);
-      });
+      enriched.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+      // If the highlighted person is beyond the first batch, enrich them
+      // separately and show as a preview pinned to the bottom of the list.
+      const highlightedIdx = highlightedPersonId
+        ? workingList.findIndex(p => p.id === highlightedPersonId)
+        : -1;
+
+      if (highlightedIdx >= BATCH_SIZE) {
+        try {
+          const [enrichedPreview] = await enrichBatch([workingList[highlightedIdx]]);
+          setPreviewPerson({ ...enrichedPreview, trueRank: highlightedIdx + 1 });
+        } catch {
+          setPreviewPerson({ ...workingList[highlightedIdx], score: calcScore(workingList[highlightedIdx]), trueRank: highlightedIdx + 1 });
+        }
+      } else {
+        setPreviewPerson(null);
+      }
 
       setPeople(enriched);
       setRemainingPeople(rest);
@@ -497,6 +507,10 @@ const App = () => {
       enriched.sort((a, b) => (b.score || 0) - (a.score || 0));
       setPeople(prev => [...prev, ...enriched]);
       setRemainingPeople(rest);
+      // If the preview person's batch just loaded, they're now in the main list
+      if (previewPerson && enriched.some(p => p.id === previewPerson.id)) {
+        setPreviewPerson(null);
+      }
     } catch (e) {
       console.error("loadMore failed:", e);
     } finally {
@@ -604,6 +618,7 @@ const App = () => {
               setIsSidebarOpen(false);
               setSearchQuery('');
               setSuggestions([]);
+              setPreviewPerson(null);
               if (leafletMapRef.current) leafletMapRef.current.setView([31.7, 35.0], 9);
             }}
             className="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-lg font-black text-xs sm:text-sm hover:bg-indigo-700 transition-colors cursor-pointer"
@@ -691,14 +706,11 @@ const App = () => {
                   {(() => {
                     const rankMap = {};
                     [...people].sort((a, b) => (b.score || 0) - (a.score || 0)).forEach((p, i) => { rankMap[p.id] = i + 1; });
-                    return people.map((p) => {
-                    const isHighlighted = p.id === highlightedPersonId;
-                    const rank = rankMap[p.id];
-                    return (
+                    const renderCard = (p, rank, highlighted) => (
                       <div
                         key={p.id}
                         ref={el => personRefs.current[p.id] = el}
-                        className={`p-3 rounded-2xl transition-all cursor-pointer group flex items-center gap-4 border relative ${isHighlighted ? 'bg-indigo-50 border-indigo-400 ring-4 ring-indigo-100 spotlight-pulse' : 'bg-white border-slate-200 hover:border-indigo-300 shadow-sm hover:shadow-md'}`}
+                        className={`p-3 rounded-2xl transition-all cursor-pointer group flex items-center gap-4 border relative ${highlighted ? 'bg-indigo-50 border-indigo-400 ring-4 ring-indigo-100 spotlight-pulse' : 'bg-white border-slate-200 hover:border-indigo-300 shadow-sm hover:shadow-md'}`}
                         onClick={() => p.wiki_url && window.open(p.wiki_url, '_blank')}
                       >
                         {p.birthYear && (
@@ -706,11 +718,9 @@ const App = () => {
                             שנת לידה: {p.birthYear}
                           </div>
                         )}
-
                         <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md shadow-sm z-10 bg-gradient-to-r from-amber-500 to-amber-400 text-white text-[9px] font-black tracking-wide border border-white/20 pointer-events-none" title="ציון פופולריות מבוסס ויקיפדיה">
                           {p.score || 0}
                         </div>
-
                         <div className="relative shrink-0">
                           {p.image ? (
                             <img src={`${p.image}?width=150`} className="w-16 h-16 rounded-full object-cover border-2 border-white shadow-sm" alt={p.full_name} />
@@ -721,20 +731,25 @@ const App = () => {
                             #{rank}
                           </div>
                         </div>
-
                         <div className="min-w-0 flex-1 pl-2">
-                          <h3 className={`font-bold text-sm leading-tight transition-colors ${isHighlighted ? 'text-indigo-900 text-base' : 'text-slate-800'}`}>
+                          <h3 className={`font-bold text-sm leading-tight transition-colors ${highlighted ? 'text-indigo-900 text-base' : 'text-slate-800'}`}>
                             {p.full_name}
                           </h3>
                           {p.description && (
-                            <p className={`text-[11px] line-clamp-2 mt-1 leading-snug ${isHighlighted ? 'text-indigo-600' : 'text-slate-500'}`}>
+                            <p className={`text-[11px] line-clamp-2 mt-1 leading-snug ${highlighted ? 'text-indigo-600' : 'text-slate-500'}`}>
                               {p.description}
                             </p>
                           )}
                         </div>
                       </div>
                     );
-                  });
+                    return [
+                      ...people.map(p => renderCard(p, rankMap[p.id], p.id === highlightedPersonId)),
+                      previewPerson && (
+                        <div key="preview-divider" className="text-[10px] text-slate-400 text-center py-1 tracking-wide">· · ·</div>
+                      ),
+                      previewPerson && renderCard(previewPerson, previewPerson.trueRank, true),
+                    ];
                   })()}
 
                   {remainingPeople.length > 0 && (
