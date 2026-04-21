@@ -78,7 +78,7 @@ const App = () => {
       script.async = true;
       script.onload = () => {
         const L = window.L;
-        const map = L.map(mapRef.current, { zoomControl: false, scrollWheelZoom: true, tap: false, bounceAtZoomLimits: false }).setView([31.7, 35.0], 9);
+        const map = L.map(mapRef.current, { zoomControl: false, scrollWheelZoom: true, tap: false, bounceAtZoomLimits: false }).setView([31.5, 35.0], 7);
         leafletMapRef.current = map;
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -540,7 +540,7 @@ const App = () => {
         );
       }
     } else if (!showOnboarding && !selectedSettlement) {
-      leafletMapRef.current.setView([31.7, 35.0], 9);
+      leafletMapRef.current.setView([31.5, 35.0], 7);
     }
   }, [showOnboarding, onboardingStep]);
 
@@ -619,7 +619,7 @@ const App = () => {
               setSearchQuery('');
               setSuggestions([]);
               setPreviewPerson(null);
-              if (leafletMapRef.current) leafletMapRef.current.setView([31.7, 35.0], 9);
+              if (leafletMapRef.current) leafletMapRef.current.setView([31.5, 35.0], 7);
             }}
             className="bg-indigo-600 text-white p-1.5 sm:p-2 rounded-lg font-black text-xs sm:text-sm hover:bg-indigo-700 transition-colors cursor-pointer"
           >{PROJECT_NAME}</button>
