@@ -804,7 +804,7 @@ const App = () => {
       </div>
 
       {/* ── Bottom toolbar — mobile only ─────────────────────────────── */}
-      <div className="sm:hidden fixed bottom-4 left-4 z-40 flex items-center gap-2">
+      <div className="sm:hidden fixed bottom-4 left-4 z-40 flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-slate-200 shadow-lg rounded-2xl px-3 py-2">
         <button
           onClick={openOnboarding}
           title="מה זה במקור.פרוג׳קט?"
