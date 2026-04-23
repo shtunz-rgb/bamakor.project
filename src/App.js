@@ -610,7 +610,7 @@ const App = () => {
         );
       })()}
 
-      <header className="bg-white border-b border-slate-200 px-3 py-2 sm:px-6 sm:py-4 flex flex-wrap justify-between items-center z-30 shadow-sm gap-2 sm:gap-4">
+      <header className="bg-white border-b border-slate-200 px-3 py-2 sm:px-6 sm:py-4 z-30 shadow-sm flex flex-wrap justify-between items-center gap-2 sm:grid sm:grid-cols-[auto_1fr_auto] sm:gap-4">
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             onClick={() => {
@@ -631,7 +631,8 @@ const App = () => {
           </div>
         </div>
 
-        <div className="flex-1 max-w-md relative">
+        <div className="flex-1 max-w-md sm:max-w-none sm:flex sm:justify-center relative">
+          <div className="w-full sm:w-[420px]">
           <form onSubmit={handleSearchSubmit} className="relative">
             <input
               type="text"
@@ -676,6 +677,24 @@ const App = () => {
               </div>
             )}
           </form>
+          </div>
+        </div>
+
+        {/* Desktop toolbar — hidden on mobile */}
+        <div className="hidden sm:flex items-center gap-2 shrink-0">
+          <button onClick={openOnboarding} title="מה זה במקור.פרוג׳קט?" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all text-sm font-black">?</button>
+          <button onClick={() => {}} title="שתף" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </button>
+          <button onClick={() => {}} title="שמור" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          </button>
+          <button onClick={() => {}} title="משחקים" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
+          </button>
+          <button onClick={() => {}} title="כתבו לנו" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          </button>
         </div>
       </header>
 
@@ -784,8 +803,8 @@ const App = () => {
         </aside>
       </div>
 
-      {/* ── Bottom toolbar ───────────────────────────────────────────── */}
-      <div className="fixed bottom-4 left-4 z-40 flex items-center gap-2">
+      {/* ── Bottom toolbar — mobile only ─────────────────────────────── */}
+      <div className="sm:hidden fixed bottom-4 left-4 z-40 flex items-center gap-2">
         <button
           onClick={openOnboarding}
           title="מה זה במקור.פרוג׳קט?"
