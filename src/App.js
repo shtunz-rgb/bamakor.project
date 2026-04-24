@@ -286,8 +286,11 @@ const App = () => {
         setSearchError(false);
         setHighlightedPersonId(person.id);
 
+        const effectiveBirthPlaceRaw = (person.birth_place_raw && person.birth_place_raw !== 'no_bp_in_infobox')
+          ? person.birth_place_raw : null;
+
         const birthCity = customLocations.find(s =>
-          person.birth_place_raw?.includes(s.name) || person.birth_place_by_wikidata?.includes(s.name)
+          effectiveBirthPlaceRaw?.includes(s.name) || person.birth_place_by_wikidata?.includes(s.name)
         );
 
         if (birthCity) {
@@ -298,7 +301,7 @@ const App = () => {
           const coords = await findLocationByWikidataId(person.wikidata_id);
           if (coords && leafletMapRef.current) {
             leafletMapRef.current.flyTo([coords.lat, coords.lng], 13);
-            const birthLabel = person.birth_place_raw || person.birth_place_by_wikidata || "מיקום לידה";
+            const birthLabel = effectiveBirthPlaceRaw || person.birth_place_by_wikidata || "מיקום לידה";
             setSelectedSettlement({ name: birthLabel, ...coords });
             setIsSidebarOpen(true);
             setSettlementSummary(birthLabel);
