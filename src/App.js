@@ -432,6 +432,20 @@ const App = () => {
       ];
 
       if (!dbData || dbData.length === 0) {
+        // If a specific person was searched but their birth place yields no co-located results,
+        // fetch and show that person alone rather than leaving the sidebar empty.
+        if (highlightedPersonId) {
+          const { data: solo } = await supabaseClient
+            .from('persons').select('*').eq('id', highlightedPersonId).limit(1);
+          if (solo && solo.length > 0) {
+            const enriched = await enrichBatch(solo);
+            setPeople(enriched);
+            setRemainingPeople([]);
+            setPreviewPerson(null);
+            setIsLoading(false);
+            return;
+          }
+        }
         setPeople([]);
         setIsLoading(false);
         return;
