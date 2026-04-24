@@ -699,7 +699,7 @@ const App = () => {
 
         {/* Desktop toolbar — hidden on mobile */}
         <div className="hidden sm:flex items-center gap-2 shrink-0">
-          <button onClick={openOnboarding} title="מה זה במקור.פרוג׳קט?" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all text-sm font-black">?</button>
+          <button onClick={openOnboarding} title="מה זה במקור.פרוג׳קט?" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all text-base font-black" style={{WebkitTextStroke:'1.5px currentColor',color:'transparent'}}>?</button>
           <button onClick={() => {}} title="שתף" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           </button>
@@ -825,7 +825,8 @@ const App = () => {
         <button
           onClick={openOnboarding}
           title="מה זה במקור.פרוג׳קט?"
-          className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all text-sm font-black"
+          className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all text-base font-black"
+          style={{WebkitTextStroke:'1.5px currentColor',color:'transparent'}}
         >?</button>
         <button
           onClick={() => {}}
