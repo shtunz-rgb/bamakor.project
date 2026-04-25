@@ -828,7 +828,15 @@ const App = () => {
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all text-sm font-black"
         >?</button>
         <button
-          onClick={() => {}}
+          onClick={() => {
+            if (navigator.share) {
+              navigator.share({
+                title: 'במקור.פרוג׳קט - מפת האישים של ישראל',
+                text: 'גלה אישים מפורסמים לפי עיר הולדתם',
+                url: window.location.href,
+              }).catch(() => {});
+            }
+          }}
           title="שתף"
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all"
         >
