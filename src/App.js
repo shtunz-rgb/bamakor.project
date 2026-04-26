@@ -809,7 +809,7 @@ const App = () => {
                       >
                         {p.birthYear && (
                           <div className="absolute top-2 left-2 z-10 text-purple-500 text-[10px] font-bold pointer-events-none">
-                            {p.birthYear}
+                            שנת לידה: {p.birthYear}
                           </div>
                         )}
                         <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md shadow-sm z-10 bg-gradient-to-r from-amber-500 to-amber-400 text-white text-[9px] font-black tracking-wide border border-white/20 pointer-events-none" title="ציון פופולריות מבוסס ויקיפדיה">
