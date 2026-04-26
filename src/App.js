@@ -51,6 +51,7 @@ const App = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [mapZoom, setMapZoom] = useState(7);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [highlightedPersonId, setHighlightedPersonId] = useState(null);
   const mapRef = useRef(null);
@@ -82,6 +83,7 @@ const App = () => {
         const L = window.L;
         const map = L.map(mapRef.current, { zoomControl: false, scrollWheelZoom: true, tap: false, bounceAtZoomLimits: false }).setView([31.5, 35.0], 7);
         leafletMapRef.current = map;
+        map.on('zoomend', () => setMapZoom(map.getZoom()));
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
           attribution: '© OpenStreetMap contributors'
@@ -877,6 +879,24 @@ const App = () => {
             </div>
           </div>
         </aside>
+      </div>
+
+      {/* ── Zoom controls — desktop only ────────────────────────────── */}
+      <div className="hidden sm:flex flex-col fixed bottom-4 right-4 z-40 rounded-xl overflow-hidden shadow-lg border border-slate-200" role="group" aria-label="פקדי זום">
+        <button
+          onClick={() => leafletMapRef.current?.zoomIn()}
+          disabled={mapZoom >= 18}
+          aria-label="התקרב"
+          title="התקרב"
+          className="w-9 h-9 flex items-center justify-center bg-white text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors text-lg font-light disabled:opacity-30 disabled:cursor-not-allowed border-b border-slate-200"
+        >+</button>
+        <button
+          onClick={() => leafletMapRef.current?.zoomOut()}
+          disabled={mapZoom <= 3}
+          aria-label="התרחק"
+          title="התרחק"
+          className="w-9 h-9 flex items-center justify-center bg-white text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors text-lg font-light disabled:opacity-30 disabled:cursor-not-allowed"
+        >−</button>
       </div>
 
       {/* ── Bottom toolbar — mobile only ─────────────────────────────── */}
