@@ -812,8 +812,18 @@ const App = () => {
                             שנת לידה: {p.birthYear}
                           </div>
                         )}
-                        <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md shadow-sm z-10 bg-gradient-to-r from-amber-500 to-amber-400 text-white text-[9px] font-black tracking-wide border border-white/20 pointer-events-none" title="ציון פופולריות מבוסס ויקיפדיה">
-                          {p.score || 0}
+                        <div className="absolute bottom-2 left-2 flex items-center pointer-events-none">
+                          {/* Score badge — in front */}
+                          <div className="relative z-10 px-2 py-0.5 rounded-md shadow-sm bg-gradient-to-r from-amber-500 to-amber-400 text-white text-[9px] font-black tracking-wide border border-white/20" title="ציון פופולריות מבוסס ויקיפדיה">
+                            {p.score || 0}
+                          </div>
+                          {/* Gauge — partially tucked under score badge */}
+                          <div className="relative z-0 -ml-1.5 bg-amber-400/30 rounded-r-md pl-3 pr-1.5 py-0.5 flex items-end gap-[2px] border-t border-r border-b border-white/20 shadow-sm" style={{height:'18px'}}>
+                            <div style={{width:'2.5px',height:'30%',background:'rgba(245,158,11,0.45)',borderRadius:'1px'}}/>
+                            <div style={{width:'2.5px',height:'55%',background:'rgba(245,158,11,0.65)',borderRadius:'1px'}}/>
+                            <div style={{width:'2.5px',height:'80%',background:'rgba(245,158,11,0.85)',borderRadius:'1px'}}/>
+                            <div style={{width:'2.5px',height:'100%',background:'rgba(245,158,11,1)',borderRadius:'1px'}}/>
+                          </div>
                         </div>
                         <div className="relative shrink-0">
                           {p.image ? (
