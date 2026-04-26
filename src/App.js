@@ -812,20 +812,8 @@ const App = () => {
                             שנת לידה: {p.birthYear}
                           </div>
                         )}
-                        <div className="absolute bottom-2 left-2 flex items-center pointer-events-none">
-                          {/* Score badge — in front */}
-                          <div className="relative z-10 px-3 py-0.5 rounded-sm shadow-sm bg-gradient-to-r from-amber-500 to-amber-400 text-white text-[9px] font-black tracking-wide border border-white/20 whitespace-nowrap" title="ציון פופולריות מבוסס ויקיפדיה">
-                            {p.score || 0}
-                          </div>
-                          {/* Circular gauge — ~40% size of score badge, 10% tucked under it */}
-                          <svg viewBox="0 0 20 20" className="relative z-0 shrink-0" style={{width:'11px',height:'11px',marginLeft:'-3px'}}>
-                            {/* Background ring */}
-                            <circle cx="10" cy="10" r="7" fill="rgba(251,191,36,0.15)" stroke="rgba(245,158,11,0.25)" strokeWidth="2.5"/>
-                            {/* Filled arc ~68%, starting from top */}
-                            <circle cx="10" cy="10" r="7" fill="none" stroke="rgba(245,158,11,0.95)" strokeWidth="2.5"
-                              strokeDasharray="29.9 14.1" strokeLinecap="round"
-                              transform="rotate(-90 10 10)"/>
-                          </svg>
+                        <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md shadow-sm z-10 bg-gradient-to-r from-amber-500 to-amber-400 text-white text-[9px] font-black tracking-wide border border-white/20 pointer-events-none" title="ציון פופולריות מבוסס ויקיפדיה">
+                          {p.score || 0}
                         </div>
                         <div className="relative shrink-0">
                           {p.image ? (
