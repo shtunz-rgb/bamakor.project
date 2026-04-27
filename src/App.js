@@ -882,7 +882,7 @@ const App = () => {
       </div>
 
       {/* ── Zoom controls — desktop only ────────────────────────────── */}
-      <div className="hidden sm:flex flex-col fixed bottom-4 right-4 z-40 rounded-xl overflow-hidden shadow-lg border border-slate-200" role="group" aria-label="פקדי זום">
+      <div className={`flex-col fixed bottom-4 right-4 z-40 rounded-xl overflow-hidden shadow-lg border border-slate-200 ${isSidebarOpen ? 'hidden' : 'hidden sm:flex'}`} role="group" aria-label="פקדי זום">
         <button
           onClick={() => leafletMapRef.current?.zoomIn()}
           disabled={mapZoom >= 18}
