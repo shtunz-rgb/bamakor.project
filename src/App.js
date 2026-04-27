@@ -662,7 +662,11 @@ const App = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <button type="submit" className="absolute left-4 top-2.5 text-slate-400 hover:text-indigo-500 transition-colors leading-none bg-transparent border-none p-0 cursor-pointer">🔍</button>
+            <button type="submit" className="absolute left-4 top-2.5 text-slate-400 hover:text-indigo-500 transition-colors bg-transparent border-none p-0 cursor-pointer flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </button>
 
             {suggestions.length > 0 && (
               <div className="absolute top-full right-0 left-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl overflow-hidden z-50">
