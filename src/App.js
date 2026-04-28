@@ -575,7 +575,6 @@ const App = () => {
             {onboardingStep > 0 ? (
               <button onClick={() => setOnboardingStep(s => s - 1)} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">→ הקודם</button>
             ) : (
-              <button onClick={closeOnboarding} className="text-sm text-slate-400 hover:text-slate-600 transition-colors">דלג</button>
             )}
             {onboardingStep < ONBOARDING_SLIDES.length - 1 ? (
               <button onClick={() => setOnboardingStep(s => s + 1)} className="bg-indigo-600 text-white px-6 py-2 rounded-full text-sm font-bold hover:bg-indigo-700 transition-all">הבא ←</button>
