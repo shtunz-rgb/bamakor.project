@@ -52,6 +52,10 @@ const App = () => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [mapZoom, setMapZoom] = useState(7);
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactStatus, setContactStatus] = useState(null); // null | 'sending' | 'success' | 'error'
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [highlightedPersonId, setHighlightedPersonId] = useState(null);
   const mapRef = useRef(null);
@@ -518,6 +522,32 @@ const App = () => {
     setShowOnboarding(true);
   };
 
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!contactMessage.trim()) return;
+    setContactStatus('sending');
+    try {
+      const res = await fetch(`https://formspree.io/f/${process.env.REACT_APP_FORMSPREE_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ email: contactEmail || 'לא סופק', message: contactMessage }),
+      });
+      if (res.ok) {
+        setContactStatus('success');
+        setTimeout(() => {
+          setShowContactModal(false);
+          setContactStatus(null);
+          setContactMessage('');
+          setContactEmail('');
+        }, 2500);
+      } else {
+        setContactStatus('error');
+      }
+    } catch {
+      setContactStatus('error');
+    }
+  };
+
   const loadMore = async () => {
     if (isLoadingMore || remainingPeople.length === 0) return;
     setIsLoadingMore(true);
@@ -772,7 +802,7 @@ const App = () => {
           <button onClick={() => {}} title="משחקים" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
           </button>
-          <button onClick={() => {}} title="כתבו לנו" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
+          <button onClick={() => setShowContactModal(true)} title="כתבו לנו" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           </button>
         </div>
@@ -900,6 +930,60 @@ const App = () => {
           className="w-9 h-9 flex items-center justify-center bg-white text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors text-lg font-light disabled:opacity-30 disabled:cursor-not-allowed"
         >−</button>
       </div>
+
+      {/* ── Contact modal ────────────────────────────────────────────── */}
+      {showContactModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4" onClick={() => setShowContactModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4" onClick={e => e.stopPropagation()} dir="rtl">
+            {/* Header */}
+            <div className="flex justify-between items-start gap-2">
+              <div>
+                <h2 className="text-xl font-black text-slate-800">כתבו לנו</h2>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">מצאתם טעות? חסרה לכם אישיות? רוצים לשתף איתנו את דעתכם? כתבו לנו ממש כאן</p>
+              </div>
+              <button onClick={() => setShowContactModal(false)} className="text-slate-400 hover:text-slate-600 text-lg leading-none shrink-0">✕</button>
+            </div>
+
+            {contactStatus === 'success' ? (
+              <div className="text-center py-6">
+                <div className="text-4xl mb-3">✅</div>
+                <p className="text-slate-700 font-bold">תודה! ההודעה נשלחה בהצלחה.</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSendMessage} className="flex flex-col gap-3">
+                <div className="relative">
+                  <textarea
+                    value={contactMessage}
+                    onChange={e => setContactMessage(e.target.value.slice(0, 150))}
+                    placeholder="ההודעה שלכם..."
+                    rows={5}
+                    maxLength={150}
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm resize-none outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                  />
+                  <span className="absolute bottom-2 left-2 text-[10px] text-slate-400">{contactMessage.length}/150</span>
+                </div>
+                <input
+                  type="email"
+                  value={contactEmail}
+                  onChange={e => setContactEmail(e.target.value)}
+                  placeholder="כתובת מייל לתגובה (אופציונלי)"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent"
+                />
+                {contactStatus === 'error' && (
+                  <p className="text-xs text-red-500 text-center">שגיאה בשליחה, נסו שוב.</p>
+                )}
+                <button
+                  type="submit"
+                  disabled={!contactMessage.trim() || contactStatus === 'sending'}
+                  className="bg-indigo-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {contactStatus === 'sending' ? 'שולח...' : 'שלח'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Bottom toolbar — mobile only ─────────────────────────────── */}
       <div className="sm:hidden fixed bottom-4 left-4 z-40 flex items-center gap-2 bg-white/90 backdrop-blur-sm border border-slate-200 shadow-lg rounded-2xl px-3 py-2">
