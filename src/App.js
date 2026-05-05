@@ -530,11 +530,8 @@ const App = () => {
       const res = await fetch(`https://formspree.io/f/${process.env.REACT_APP_FORMSPREE_ID}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ email: contactEmail || 'לא סופק', message: contactMessage }),
+        body: JSON.stringify({ ...(contactEmail ? { email: contactEmail } : {}), message: contactMessage }),
       });
-      const resJson = await res.json().catch(() => ({}));
-      console.log('Formspree response:', res.status, resJson);
-      console.log('Form ID:', process.env.REACT_APP_FORMSPREE_ID);
       if (res.ok) {
         setContactStatus('success');
         setTimeout(() => {
