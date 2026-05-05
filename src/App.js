@@ -532,6 +532,9 @@ const App = () => {
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ email: contactEmail || 'לא סופק', message: contactMessage }),
       });
+      const resJson = await res.json().catch(() => ({}));
+      console.log('Formspree response:', res.status, resJson);
+      console.log('Form ID:', process.env.REACT_APP_FORMSPREE_ID);
       if (res.ok) {
         setContactStatus('success');
         setTimeout(() => {
