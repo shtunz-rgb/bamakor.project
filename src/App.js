@@ -939,7 +939,7 @@ const App = () => {
             <div className="flex justify-between items-start gap-2">
               <div>
                 <h2 className="text-xl font-black text-slate-800">כתבו לנו</h2>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">מצאתם טעות? חסרה לכם אישיות? רוצים לשתף איתנו את דעתכם? כתבו לנו ממש כאן</p>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">נפלה טעות? חסרה אישיות? תרצו לשתף איתנו משהו? כתבו לנו ממש כאן</p>
               </div>
               <button onClick={() => setShowContactModal(false)} className="text-slate-400 hover:text-slate-600 text-lg leading-none shrink-0">✕</button>
             </div>
