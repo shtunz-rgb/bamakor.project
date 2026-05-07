@@ -53,6 +53,8 @@ const App = () => {
   const [shareCopied, setShareCopied] = useState(false);
   const [mapZoom, setMapZoom] = useState(7);
   const [showContactModal, setShowContactModal] = useState(false);
+  const [showBookmarkModal, setShowBookmarkModal] = useState(false);
+  const [bookmarkDone, setBookmarkDone] = useState(false);
   const [contactMessage, setContactMessage] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactStatus, setContactStatus] = useState(null); // null | 'sending' | 'success' | 'error'
@@ -796,7 +798,7 @@ const App = () => {
               </>
             )}
           </div>
-          <button onClick={() => {}} title="שמור" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
+          <button onClick={() => { setBookmarkDone(false); setShowBookmarkModal(true); }} title="שמור" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
           </button>
           <button onClick={() => {}} title="משחקים" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
@@ -930,6 +932,47 @@ const App = () => {
           className="w-9 h-9 flex items-center justify-center bg-white text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-colors text-lg font-light disabled:opacity-30 disabled:cursor-not-allowed"
         >−</button>
       </div>
+
+      {/* ── Bookmark modal — desktop only ───────────────────────────── */}
+      {showBookmarkModal && (
+        <div className="fixed inset-0 z-50 hidden sm:flex items-center justify-center bg-slate-900/60 px-4" onClick={() => setShowBookmarkModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xs p-6 flex flex-col gap-4" onClick={e => e.stopPropagation()} dir="rtl">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-black text-slate-800">שמירת סימניה</h2>
+              <button onClick={() => setShowBookmarkModal(false)} className="text-slate-400 hover:text-slate-600 text-lg leading-none">✕</button>
+            </div>
+            {bookmarkDone ? (
+              <div className="flex flex-col items-center gap-3 py-2">
+                <div className="text-3xl">🔖</div>
+                <p className="text-sm text-slate-700 text-center leading-relaxed">
+                  לחצו על{' '}
+                  <kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-xs font-mono">
+                    {/Mac|iPhone|iPad/i.test(navigator.userAgent) ? '⌘ Cmd+D' : 'Ctrl+D'}
+                  </kbd>
+                  {' '}כדי לשמור את האתר כסימניה בדפדפן שלכם.
+                </p>
+                <button onClick={() => setShowBookmarkModal(false)} className="w-full bg-indigo-600 text-white py-2 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all">
+                  סגור
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  לחיצה על "המשך" תציג לכם הוראות קצרות לשמירת האתר כסימניה בדפדפן שלכם.
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowBookmarkModal(false)} className="flex-1 py-2 rounded-xl font-bold text-sm border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all">
+                    ביטול
+                  </button>
+                  <button onClick={() => setBookmarkDone(true)} className="flex-1 py-2 rounded-xl font-bold text-sm bg-indigo-600 text-white hover:bg-indigo-700 transition-all">
+                    המשך
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Contact modal ────────────────────────────────────────────── */}
       {showContactModal && (
