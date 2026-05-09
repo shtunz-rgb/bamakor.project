@@ -55,6 +55,8 @@ const App = () => {
   const [showContactModal, setShowContactModal] = useState(false);
   const [showBookmarkModal, setShowBookmarkModal] = useState(false);
   const [bookmarkDone, setBookmarkDone] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [showPwaModal, setShowPwaModal] = useState(false);
   const [contactMessage, setContactMessage] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactStatus, setContactStatus] = useState(null); // null | 'sending' | 'success' | 'error'
@@ -499,6 +501,20 @@ const App = () => {
   useEffect(() => {
     if (selectedSettlement) fetchPeople(selectedSettlement);
   }, [selectedSettlement, highlightedPersonId]);
+
+
+  // PWA: register service worker + capture beforeinstallprompt (Android)
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+    const handler = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
 
   useEffect(() => {
@@ -974,6 +990,40 @@ const App = () => {
         </div>
       )}
 
+      {/* ── PWA install modal — mobile only (iOS instructions) ─────── */}
+      {showPwaModal && (
+        <div className="fixed inset-0 z-50 sm:hidden flex items-end justify-center bg-slate-900/60 px-4 pb-6" onClick={() => setShowPwaModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 flex flex-col gap-4" onClick={e => e.stopPropagation()} dir="rtl">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-black text-slate-800">הוסף למסך הבית</h2>
+              <button onClick={() => setShowPwaModal(false)} className="text-slate-400 hover:text-slate-600 text-lg leading-none">✕</button>
+            </div>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              כדי להוסיף את האפליקציה למסך הבית שלכם:
+            </p>
+            <ol className="flex flex-col gap-3 text-sm text-slate-700">
+              <li className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs">1</span>
+                <span>לחצו על כפתור <strong>השיתוף</strong> בתחתית הדפדפן
+                  <span className="inline-block mr-1 text-base">⬆️</span>
+                </span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs">2</span>
+                <span>גללו מטה ובחרו <strong>"הוסף למסך הבית"</strong></span>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-xs">3</span>
+                <span>לחצו <strong>"הוסף"</strong> לאישור</span>
+              </li>
+            </ol>
+            <button onClick={() => setShowPwaModal(false)} className="w-full bg-indigo-600 text-white py-2.5 rounded-xl font-bold text-sm hover:bg-indigo-700 transition-all">
+              הבנתי
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Contact modal ────────────────────────────────────────────── */}
       {showContactModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4" onClick={() => setShowContactModal(false)}>
@@ -1054,7 +1104,14 @@ const App = () => {
           </svg>
         </button>
         <button
-          onClick={() => {}}
+          onClick={() => {
+            if (installPrompt) {
+              installPrompt.prompt();
+              installPrompt.userChoice.then(() => setInstallPrompt(null));
+            } else {
+              setShowPwaModal(true);
+            }
+          }}
           title="שמור"
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all"
         >
