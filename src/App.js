@@ -34,7 +34,7 @@ const calcScore = p => {
   return (p.num_wiki_languages || 0) >= 80 ? base * 2 : base;
 };
 
-const BATCH_SIZE = 50;
+const BATCH_SIZE = 20;
 
 const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,6 +68,8 @@ const App = () => {
   const markersRef = useRef([]);
   const onboardingMarkersRef = useRef([]);
   const personRefs = useRef({});
+  const peopleCache = useRef(new Map());
+  const fetchTokenRef = useRef(0);
 
   // Initialize Supabase client once using the installed npm package (no CDN needed)
   const supabaseClient = useMemo(() => {
@@ -367,36 +369,42 @@ const App = () => {
 
   const fetchPeople = async (settlement) => {
     if (!supabaseClient) return;
-    setIsLoading(true);
     setSheetExpanded(false);
+
+    // ── Cache hit: show instantly, skip all network calls ────────────────────
+    const cacheKey = `${settlement.id ?? settlement.name}::${highlightedPersonId ?? ''}`;
+    const cached = peopleCache.current.get(cacheKey);
+    if (cached) {
+      setPeople(cached.people);
+      setRemainingPeople(cached.remaining);
+      setPreviewPerson(cached.previewPerson ?? null);
+      return;
+    }
+
+    // ── Cache miss: fetch from Supabase ──────────────────────────────────────
+    const myToken = ++fetchTokenRef.current;
+    setIsLoading(true);
 
     try {
       const isDynamic = !settlement.id;
-
+      const base = { ascending: false };
       let rawData, wikidataData;
 
       if (isDynamic) {
-        // Dynamic location (e.g. "בואנוס איירס, ארגנטינה"): use exact match to avoid
-        // comma-in-name breaking the PostgREST or() separator
-        const base = { ascending: false };
-        ({ data: rawData } = await supabaseClient
-          .from('persons').select('*')
-          .eq('birth_place_raw', settlement.name)
-          .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000));
-
-        ({ data: wikidataData } = await supabaseClient
-          .from('persons').select('*')
-          .or('birth_place_raw.is.null,birth_place_raw.eq.no_bp_in_infobox')
-          .eq('birth_place_by_wikidata', settlement.name)
-          .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000));
-
+        // Dynamic location: use exact match on both columns in parallel
+        [{ data: rawData }, { data: wikidataData }] = await Promise.all([
+          supabaseClient.from('persons').select('*')
+            .eq('birth_place_raw', settlement.name)
+            .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000),
+          supabaseClient.from('persons').select('*')
+            .or('birth_place_raw.is.null,birth_place_raw.eq.no_bp_in_infobox')
+            .eq('birth_place_by_wikidata', settlement.name)
+            .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000),
+        ]);
       } else {
-        // Hardcoded location: use ilike with word-boundary filtering
+        // Hardcoded location: ilike with word-boundary filtering, both queries in parallel
         const searchTerms = [settlement.name];
-
-        if (settlement.name.includes('-')) {
-          searchTerms.push(settlement.name.split('-')[0]);
-        }
+        if (settlement.name.includes('-')) searchTerms.push(settlement.name.split('-')[0]);
         if (settlement.name.startsWith('קריית ') || settlement.name.startsWith('קרית ')) {
           const stripped = settlement.name.replace(/^קרית\s|^קריית\s/, '');
           if (stripped.length >= 3) searchTerms.push(stripped);
@@ -408,26 +416,21 @@ const App = () => {
           return new RegExp(`(^|[\\s,])${escaped}([\\s,]|$)`).test(value);
         };
 
-        const base = { ascending: false };
         const rawConditions = searchTerms.map(t => `birth_place_raw.ilike.%${t}%`).join(',');
-        ({ data: rawData } = await supabaseClient
-          .from('persons').select('*')
-          .or(rawConditions)
-          .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000));
-
         const wikidataConditions = searchTerms.map(t => `birth_place_by_wikidata.ilike.%${t}%`).join(',');
-        ({ data: wikidataData } = await supabaseClient
-          .from('persons').select('*')
-          .or(`birth_place_raw.is.null,birth_place_raw.eq.no_bp_in_infobox`)
-          .or(wikidataConditions)
-          .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000));
+
+        [{ data: rawData }, { data: wikidataData }] = await Promise.all([
+          supabaseClient.from('persons').select('*')
+            .or(rawConditions)
+            .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000),
+          supabaseClient.from('persons').select('*')
+            .or('birth_place_raw.is.null,birth_place_raw.eq.no_bp_in_infobox')
+            .or(wikidataConditions)
+            .order('num_wiki_languages', base).order('wikipage_wordcount', base).limit(5000),
+        ]);
 
         const exclusions = BIRTH_PLACE_EXCLUSIONS[settlement.name] || [];
         const notExcluded = (value) => !exclusions.some(ex => (value || '').includes(ex));
-
-        // Exclude persons who belong to a more-specific settlement whose name
-        // contains our settlement's name (e.g. exclude "גן יבנה" results when
-        // searching for "יבנה"). Skip hyphen-variants (e.g. "תל אביב-יפו").
         const moreSpecific = customLocations.filter(s =>
           s.id !== settlement.id &&
           s.name.includes(settlement.name) &&
@@ -446,56 +449,67 @@ const App = () => {
       ];
 
       if (!dbData || dbData.length === 0) {
-        // If a specific person was searched but their birth place yields no co-located results,
-        // fetch and show that person alone rather than leaving the sidebar empty.
         if (highlightedPersonId) {
           const { data: solo } = await supabaseClient
             .from('persons').select('*').eq('id', highlightedPersonId).limit(1);
           if (solo && solo.length > 0) {
+            if (fetchTokenRef.current !== myToken) return;
             const enriched = await enrichBatch(solo);
+            if (fetchTokenRef.current !== myToken) return;
             setPeople(enriched);
             setRemainingPeople([]);
             setPreviewPerson(null);
             setIsLoading(false);
+            peopleCache.current.set(cacheKey, { people: enriched, remaining: [], previewPerson: null });
             return;
           }
         }
+        if (fetchTokenRef.current !== myToken) return;
         setPeople([]);
+        setRemainingPeople([]);
         setIsLoading(false);
         return;
       }
 
       const workingList = [...dbData].sort((a, b) => calcScore(b) - calcScore(a));
-
       const firstBatch = workingList.slice(0, BATCH_SIZE);
       const rest = workingList.slice(BATCH_SIZE);
 
+      // ── Show DB-only cards immediately (no images/descriptions yet) ─────
+      if (fetchTokenRef.current !== myToken) return;
+      setPeople(firstBatch.map(p => ({ ...p, score: calcScore(p) })));
+      setRemainingPeople(rest);
+      setPreviewPerson(null);
+      setIsLoading(false);
+
+      // ── Enrich with Wikidata in the background ───────────────────────────
       const enriched = await enrichBatch(firstBatch);
+      if (fetchTokenRef.current !== myToken) return;
       enriched.sort((a, b) => (b.score || 0) - (a.score || 0));
 
-      // If the highlighted person is beyond the first batch, enrich them
-      // separately and show as a preview pinned to the bottom of the list.
       const highlightedIdx = highlightedPersonId
         ? workingList.findIndex(p => p.id === highlightedPersonId)
         : -1;
 
+      let previewPerson = null;
       if (highlightedIdx >= BATCH_SIZE) {
         try {
           const [enrichedPreview] = await enrichBatch([workingList[highlightedIdx]]);
-          setPreviewPerson({ ...enrichedPreview, trueRank: highlightedIdx + 1 });
+          if (fetchTokenRef.current !== myToken) return;
+          previewPerson = { ...enrichedPreview, trueRank: highlightedIdx + 1 };
         } catch {
-          setPreviewPerson({ ...workingList[highlightedIdx], score: calcScore(workingList[highlightedIdx]), trueRank: highlightedIdx + 1 });
+          previewPerson = { ...workingList[highlightedIdx], score: calcScore(workingList[highlightedIdx]), trueRank: highlightedIdx + 1 };
         }
-      } else {
-        setPreviewPerson(null);
       }
 
+      if (fetchTokenRef.current !== myToken) return;
       setPeople(enriched);
-      setRemainingPeople(rest);
+      setPreviewPerson(previewPerson);
+      peopleCache.current.set(cacheKey, { people: enriched, remaining: rest, previewPerson });
+
     } catch (e) {
       console.error("fetchPeople failed:", e);
-    } finally {
-      setIsLoading(false);
+      if (fetchTokenRef.current === myToken) setIsLoading(false);
     }
   };
 
