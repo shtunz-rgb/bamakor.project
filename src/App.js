@@ -57,6 +57,7 @@ const App = () => {
   const [bookmarkDone, setBookmarkDone] = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showPwaModal, setShowPwaModal] = useState(false);
+  const [sheetExpanded, setSheetExpanded] = useState(false);
   const [contactMessage, setContactMessage] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactStatus, setContactStatus] = useState(null); // null | 'sending' | 'success' | 'error'
@@ -367,6 +368,7 @@ const App = () => {
   const fetchPeople = async (settlement) => {
     if (!supabaseClient) return;
     setIsLoading(true);
+    setSheetExpanded(false);
 
     try {
       const isDynamic = !settlement.id;
@@ -829,9 +831,29 @@ const App = () => {
       <div className="flex-1 relative flex">
         <div ref={mapRef} className="flex-1 z-0" />
 
-        <aside className={`absolute right-0 top-0 bottom-0 w-full sm:w-80 md:w-96 bg-white shadow-2xl z-20 transition-all duration-500 border-l border-slate-200 ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <aside className={`fixed bottom-0 left-0 right-0 z-20 bg-white shadow-2xl transition-all duration-500 rounded-t-2xl border-t border-slate-200 sm:absolute sm:right-0 sm:top-0 sm:bottom-0 sm:left-auto sm:w-80 md:w-96 sm:rounded-none sm:border-t-0 sm:border-l sm:h-auto ${isSidebarOpen ? 'translate-y-0 sm:translate-x-0 sm:translate-y-0' : 'translate-y-full sm:translate-x-full sm:translate-y-0'} ${sheetExpanded ? 'h-[85vh]' : 'h-[240px]'}`}>
           <div className="h-full flex flex-col">
-            <div className="p-5 border-b border-slate-100 flex flex-col justify-center bg-indigo-700 text-white shadow-lg shrink-0 relative">
+
+            {/* Mobile: drag handle + compact header */}
+            <div className="sm:hidden shrink-0">
+              <button
+                onClick={() => setSheetExpanded(v => !v)}
+                className="w-full flex flex-col items-center pt-2 pb-1 gap-0.5 focus:outline-none"
+                aria-label={sheetExpanded ? 'כווץ' : 'הרחב'}
+              >
+                <div className="w-10 h-1 bg-slate-300 rounded-full mb-0.5" />
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 text-slate-400">
+                  {sheetExpanded ? <polyline points="18 15 12 9 6 15" /> : <polyline points="6 9 12 15 18 9" />}
+                </svg>
+              </button>
+              <div className="flex justify-between items-center px-4 pb-3">
+                <h2 className="text-base font-bold text-slate-800 truncate">{selectedSettlement?.name}</h2>
+                <button onClick={() => setIsSidebarOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all text-sm">✕</button>
+              </div>
+            </div>
+
+            {/* Desktop: full indigo header */}
+            <div className="hidden sm:flex flex-col p-5 border-b border-slate-100 justify-center bg-indigo-700 text-white shadow-lg shrink-0 relative">
               <div className="flex justify-between items-start mb-2">
                 <h2 className="text-xl font-bold leading-tight truncate pl-8">{selectedSettlement?.name}</h2>
                 <button onClick={() => setIsSidebarOpen(false)} className="absolute top-3 left-3 hover:bg-white/20 w-11 h-11 flex items-center justify-center rounded-full leading-none transition-all text-lg">✕</button>
@@ -841,7 +863,7 @@ const App = () => {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-100 overscroll-contain">
+            <div className={`flex-1 p-4 custom-scrollbar bg-slate-100 overscroll-contain ${sheetExpanded ? 'overflow-y-auto' : 'overflow-hidden'} sm:overflow-y-auto`}>
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 text-indigo-600">
                   <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mb-4"></div>
