@@ -131,10 +131,11 @@ const App = () => {
       ? customLocations.filter(loc => {
           if (selectedSettlement && loc.id === selectedSettlement.id) return true;
           const count = locationCounts.get(loc.name) || 0;
-          if (zoom >= 11) return true;
-          if (zoom >= 9)  return count >= 5;
-          if (zoom >= 8)  return count >= 15;
-          return count >= 30; // zoom 7 (default mobile view)
+          if (zoom >= 9)  return true;
+          if (zoom >= 8)  return count >= 2;
+          if (zoom >= 7)  return count >= 4;
+          if (zoom >= 6)  return count >= 8;
+          return count >= 15; // zoom 5 and below
         })
       : customLocations;
 
