@@ -52,6 +52,7 @@ const App = () => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [mapZoom, setMapZoom] = useState(7);
+  const [locationCounts, setLocationCounts] = useState(new Map());
   const [showContactModal, setShowContactModal] = useState(false);
   const [showBookmarkModal, setShowBookmarkModal] = useState(false);
   const [bookmarkDone, setBookmarkDone] = useState(false);
@@ -113,7 +114,7 @@ const App = () => {
     if (leafletMapRef.current) {
       renderMarkers();
     }
-  }, [selectedSettlement]);
+  }, [selectedSettlement, mapZoom, locationCounts]);
 
 
   const renderMarkers = () => {
@@ -121,6 +122,21 @@ const App = () => {
     const L = window.L;
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
+
+    // On mobile, progressively reveal settlements by person-count as the user zooms in.
+    // Desktop always shows all markers.
+    const zoom = leafletMapRef.current.getZoom();
+    const isMobileView = window.innerWidth < 640;
+    const visibleLocations = (isMobileView && locationCounts.size > 0)
+      ? customLocations.filter(loc => {
+          if (selectedSettlement && loc.id === selectedSettlement.id) return true;
+          const count = locationCounts.get(loc.name) || 0;
+          if (zoom >= 11) return true;
+          if (zoom >= 9)  return count >= 5;
+          if (zoom >= 8)  return count >= 15;
+          return count >= 30; // zoom 7 (default mobile view)
+        })
+      : customLocations;
 
     // Dynamic location marker (not in customLocations, e.g. Buenos Aires)
     const isDynamicSelected = selectedSettlement && !customLocations.find(s => s.id === selectedSettlement.id);
@@ -141,7 +157,7 @@ const App = () => {
       );
     }
 
-    customLocations.forEach(s => {
+    visibleLocations.forEach(s => {
       const isSelected = selectedSettlement && s.id === selectedSettlement.id;
 
       if (isSelected) {
@@ -531,6 +547,38 @@ const App = () => {
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
+
+
+  // Background: count persons per settlement for zoom-based marker filtering (mobile)
+  useEffect(() => {
+    if (!supabaseClient) return;
+    const fetchCounts = async () => {
+      try {
+        const { data } = await supabaseClient
+          .from('persons')
+          .select('birth_place_raw, birth_place_by_wikidata');
+        if (!data) return;
+        const locNames = customLocations.map(loc => loc.name);
+        const counts = new Map();
+        data.forEach(p => {
+          const place = (p.birth_place_raw && p.birth_place_raw !== 'no_bp_in_infobox')
+            ? p.birth_place_raw
+            : (p.birth_place_by_wikidata || null);
+          if (!place) return;
+          for (const name of locNames) {
+            if (place === name || place.startsWith(name + ',') || place.startsWith(name + ' ,') || place.endsWith(', ' + name)) {
+              counts.set(name, (counts.get(name) || 0) + 1);
+              break;
+            }
+          }
+        });
+        setLocationCounts(counts);
+      } catch {
+        // silent fail — all markers remain visible as fallback
+      }
+    };
+    fetchCounts();
+  }, [supabaseClient]);
 
 
   useEffect(() => {
