@@ -859,13 +859,13 @@ const App = () => {
               </svg>
             </button>
 
-            {/* Mobile: compact header — name, close, and settlement description */}
-            <div className="sm:hidden shrink-0 pt-4">
-              <div className="flex justify-between items-center px-4 pb-2">
-                <h2 className="text-base font-bold text-slate-800 truncate">{selectedSettlement?.name}</h2>
-                <button onClick={() => setIsSidebarOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all text-sm">✕</button>
+            {/* Mobile: indigo header — name + description in one block, same as desktop */}
+            <div className="sm:hidden shrink-0 bg-indigo-700 text-white shadow-lg pt-5 px-4 pb-3 relative">
+              <div className="flex justify-between items-start mb-2">
+                <h2 className="text-lg font-bold leading-tight truncate pl-8">{selectedSettlement?.name}</h2>
+                <button onClick={() => setIsSidebarOpen(false)} className="absolute top-3 left-3 hover:bg-white/20 w-10 h-10 flex items-center justify-center rounded-full leading-none transition-all">✕</button>
               </div>
-              <div className="mx-4 mb-3 text-[11px] leading-relaxed bg-indigo-700 text-white p-2 rounded-lg italic opacity-90">
+              <div className="text-[11px] opacity-90 leading-relaxed bg-white/10 p-2 rounded-lg border border-white/10 italic">
                 {settlementSummary || 'טוען נתונים...'}
               </div>
             </div>
