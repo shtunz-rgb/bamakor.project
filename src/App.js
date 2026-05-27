@@ -1417,7 +1417,7 @@ const App = () => {
           </svg>
         </button>
         <button
-          onClick={() => {}}
+          onClick={() => { setShowGameModal(true); setGameData(null); loadDailyGame(); }}
           title="משחקים"
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all"
         >
