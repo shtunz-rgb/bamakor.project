@@ -36,6 +36,38 @@ const calcScore = p => {
 
 const BATCH_SIZE = 20;
 
+// ── Daily game helpers ───────────────────────────────────────────────────────
+
+const getDailySeed = (dateStr) => {
+  let h = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    h = (Math.imul(31, h) + dateStr.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+};
+
+const seededPick = (arr, n, seed) => {
+  const out = [], used = new Set();
+  let s = seed;
+  while (out.length < n && out.length < arr.length) {
+    s = (Math.imul(1664525, s) + 1013904223) | 0;
+    const idx = Math.abs(s) % arr.length;
+    if (!used.has(idx)) { used.add(idx); out.push(arr[idx]); }
+  }
+  return out;
+};
+
+const seededShuffle = (arr, seed) => {
+  const a = [...arr];
+  let s = seed;
+  for (let i = a.length - 1; i > 0; i--) {
+    s = (Math.imul(1664525, s) + 1013904223) | 0;
+    const j = Math.abs(s) % (i + 1);
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
 const App = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -59,6 +91,9 @@ const App = () => {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showPwaModal, setShowPwaModal] = useState(false);
   const [sheetExpanded, setSheetExpanded] = useState(false);
+  const [showGameModal, setShowGameModal] = useState(false);
+  const [gameData, setGameData] = useState(null);
+  const [gameLoading, setGameLoading] = useState(false);
   const [contactMessage, setContactMessage] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactStatus, setContactStatus] = useState(null); // null | 'sending' | 'success' | 'error'
@@ -383,6 +418,84 @@ const App = () => {
     });
     return batch.map(p => ({ ...p, ...wikiMap[p.wikidata_id], score: calcScore(p) }));
   };
+
+  const loadDailyGame = async () => {
+    if (!supabaseClient) return;
+    const dateStr = new Date().toISOString().slice(0, 10);
+
+    // Try to restore today's cached game
+    try {
+      const cached = localStorage.getItem(`bamakor-game-v1-${dateStr}`);
+      if (cached) { setGameData(JSON.parse(cached)); return; }
+    } catch {}
+
+    setGameLoading(true);
+    try {
+      const seed = getDailySeed(dateStr);
+
+      // Pool: prefer well-known settlements (with persons); fall back to all
+      const withCounts = customLocations.filter(loc => (locationCounts.get(loc.name) || 0) >= 5);
+      const pool = withCounts.length >= 20 ? withCounts : customLocations.filter(loc => loc.id);
+
+      // Pick today's settlement
+      const settlement = pool[seed % pool.length];
+
+      // Fetch top persons for that settlement
+      const base = { ascending: false };
+      const { data: rawPersons } = await supabaseClient
+        .from('persons')
+        .select('*')
+        .or(`birth_place_raw.ilike.%${settlement.name}%,birth_place_by_wikidata.ilike.%${settlement.name}%`)
+        .not('wikidata_id', 'is', null)
+        .order('num_wiki_languages', base)
+        .order('wikipage_wordcount', base)
+        .limit(15);
+
+      if (!rawPersons || rawPersons.length === 0) { setGameLoading(false); return; }
+
+      // Enrich to get images + descriptions
+      const enriched = await enrichBatch(rawPersons.slice(0, 10));
+      const withImage = enriched.filter(p => p.image);
+      if (withImage.length === 0) { setGameLoading(false); return; }
+
+      // Pick person deterministically
+      const person = withImage[seed % withImage.length];
+
+      // 3 wrong answers: well-known settlements different from correct one
+      const wrongPool = pool.filter(loc => loc.name !== settlement.name);
+      const wrongPicks = seededPick(wrongPool, 3, seed + 999);
+      const options = seededShuffle([settlement.name, ...wrongPicks.map(l => l.name)], seed + 777);
+
+      const data = {
+        date: dateStr,
+        person: { ...person },
+        correctAnswer: settlement.name,
+        options,
+        answered: false,
+        selectedAnswer: null,
+        isCorrect: null,
+      };
+
+      try { localStorage.setItem(`bamakor-game-v1-${dateStr}`, JSON.stringify(data)); } catch {}
+      setGameData(data);
+    } catch (e) {
+      console.error('Game load failed:', e);
+    } finally {
+      setGameLoading(false);
+    }
+  };
+
+  const handleGameAnswer = (answer) => {
+    if (!gameData || gameData.answered) return;
+    const isCorrect = answer === gameData.correctAnswer;
+    const updated = { ...gameData, answered: true, selectedAnswer: answer, isCorrect };
+    try {
+      const dateStr = new Date().toISOString().slice(0, 10);
+      localStorage.setItem(`bamakor-game-v1-${dateStr}`, JSON.stringify(updated));
+    } catch {}
+    setGameData(updated);
+  };
+
 
   const fetchPeople = async (settlement) => {
     if (!supabaseClient) return;
@@ -882,7 +995,7 @@ const App = () => {
           <button onClick={() => { setBookmarkDone(false); setShowBookmarkModal(true); }} title="שמור" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
           </button>
-          <button onClick={() => {}} title="משחקים" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
+          <button onClick={() => { setShowGameModal(true); setGameData(null); loadDailyGame(); }} title="משחקים" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
           </button>
           <button onClick={() => setShowContactModal(true)} title="כתבו לנו" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
@@ -1075,6 +1188,101 @@ const App = () => {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Daily game modal ─────────────────────────────────────────── */}
+      {showGameModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4" onClick={() => setShowGameModal(false)}>
+          <div className="bg-slate-900 rounded-2xl w-full max-w-sm overflow-hidden flex flex-col max-h-[90vh]" onClick={e => e.stopPropagation()} dir="rtl">
+
+            {/* Header */}
+            <div className="flex justify-between items-center px-5 py-3 border-b border-slate-700 shrink-0">
+              <h2 className="text-white font-black text-base tracking-wide">🎯 שאלון יומי</h2>
+              <button onClick={() => setShowGameModal(false)} className="text-slate-400 hover:text-white transition-colors text-lg leading-none">✕</button>
+            </div>
+
+            {/* Body */}
+            <div className="overflow-y-auto flex-1 flex flex-col">
+              {gameLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3">
+                  <div className="w-10 h-10 border-4 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-slate-400 text-sm">טוען שאלון...</p>
+                </div>
+              ) : gameData ? (
+                <>
+                  {/* ── Person display ── */}
+                  <div className="flex flex-col items-center px-5 pt-6 pb-4 gap-2">
+                    <div className="w-44 h-44 rounded-full overflow-hidden border-4 border-indigo-500 shadow-2xl shadow-indigo-900/60 shrink-0">
+                      <img src={`${gameData.person.image}?width=350`} alt={gameData.person.full_name} className="w-full h-full object-cover" />
+                    </div>
+                    <h3 className="text-white font-black text-xl mt-2 text-center">{gameData.person.full_name}</h3>
+                    <div className="flex items-center gap-2 flex-wrap justify-center">
+                      {gameData.person.birthYear && (
+                        <span className="text-purple-400 text-sm font-bold">שנת לידה: {gameData.person.birthYear}</span>
+                      )}
+                      <span className="bg-gradient-to-r from-amber-500 to-amber-400 text-white text-xs font-black px-2 py-0.5 rounded-md shadow">
+                        {gameData.person.score || 0}
+                      </span>
+                    </div>
+                    {gameData.person.description && (
+                      <p className="text-slate-400 text-xs text-center leading-relaxed italic px-2">
+                        {gameData.person.description}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* ── Question ── */}
+                  <div className="px-5 pb-4 text-center">
+                    <p className="text-white font-bold text-sm leading-snug">
+                      מהו יישוב הלידה של {gameData.person.full_name}?
+                    </p>
+                  </div>
+
+                  {/* ── Answer grid (WWTBAM style) ── */}
+                  <div className="px-4 pb-4 grid grid-cols-2 gap-2">
+                    {gameData.options.map((opt, i) => {
+                      const letters = ['א', 'ב', 'ג', 'ד'];
+                      let cls = 'bg-indigo-700 border border-indigo-500 hover:bg-indigo-600 text-white cursor-pointer';
+                      if (gameData.answered) {
+                        if (opt === gameData.correctAnswer) cls = 'bg-green-600 border border-green-500 text-white cursor-default';
+                        else if (opt === gameData.selectedAnswer) cls = 'bg-red-600 border border-red-500 text-white cursor-default';
+                        else cls = 'bg-slate-700 border border-slate-600 text-slate-500 cursor-default';
+                      }
+                      return (
+                        <button
+                          key={opt}
+                          onClick={() => handleGameAnswer(opt)}
+                          disabled={gameData.answered}
+                          className={`${cls} rounded-xl px-3 py-3 text-sm font-bold transition-all flex items-center gap-2`}
+                        >
+                          <span className="shrink-0 w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs font-black">{letters[i]}</span>
+                          <span className="flex-1 text-right leading-tight">{opt}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* ── Result ── */}
+                  {gameData.answered && (
+                    <div className={`mx-4 mb-5 p-4 rounded-xl text-center border ${gameData.isCorrect ? 'bg-green-900/40 border-green-700' : 'bg-red-900/40 border-red-700'}`}>
+                      <p className="text-white font-bold text-sm">
+                        {gameData.isCorrect ? '🎉 כל הכבוד! ענית נכון' : `😔 לא הפעם... התשובה: ${gameData.correctAnswer}`}
+                      </p>
+                      <p className="text-slate-400 text-xs mt-1">חזרו מחר לשאלה הבאה</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 gap-4">
+                  <p className="text-slate-400 text-sm">לא ניתן לטעון את השאלון כרגע</p>
+                  <button onClick={loadDailyGame} className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-xl text-sm font-bold transition-all">
+                    נסה שוב
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
