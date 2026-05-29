@@ -149,7 +149,7 @@ const App = () => {
     if (leafletMapRef.current) {
       renderMarkers();
     }
-  }, [selectedSettlement, mapZoom, locationCounts]);
+  }, [selectedSettlement]);
 
 
   const renderMarkers = () => {
@@ -157,22 +157,6 @@ const App = () => {
     const L = window.L;
     markersRef.current.forEach(m => m.remove());
     markersRef.current = [];
-
-    // On mobile, progressively reveal settlements by person-count as the user zooms in.
-    // Desktop always shows all markers.
-    const zoom = leafletMapRef.current.getZoom();
-    const isMobileView = window.innerWidth < 640;
-    const visibleLocations = (isMobileView && locationCounts.size > 0)
-      ? customLocations.filter(loc => {
-          if (selectedSettlement && loc.id === selectedSettlement.id) return true;
-          const count = locationCounts.get(loc.name) || 0;
-          if (zoom >= 9)  return true;
-          if (zoom >= 8)  return count >= 2;
-          if (zoom >= 7)  return count >= 4;
-          if (zoom >= 6)  return count >= 8;
-          return count >= 15; // zoom 5 and below
-        })
-      : customLocations;
 
     // Dynamic location marker (not in customLocations, e.g. Buenos Aires)
     const isDynamicSelected = selectedSettlement && !customLocations.find(s => s.id === selectedSettlement.id);
@@ -193,7 +177,7 @@ const App = () => {
       );
     }
 
-    visibleLocations.forEach(s => {
+    customLocations.forEach(s => {
       const isSelected = selectedSettlement && s.id === selectedSettlement.id;
 
       if (isSelected) {
