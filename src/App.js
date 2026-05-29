@@ -193,7 +193,7 @@ const App = () => {
 
       const isMobile = L.Browser.mobile;
       const marker = L.circleMarker([s.lat, s.lng], {
-        radius: isSelected ? (isMobile ? 14 : 9) : (isMobile ? 12 : 7),
+        radius: isSelected ? (isMobile ? 9 : 9) : (isMobile ? 6 : 7),
         fillColor: '#4f46e5',
         color: '#fff',
         weight: 2,
