@@ -417,14 +417,57 @@ const App = () => {
     try {
       const seed = getDailySeed(dateStr);
 
-      // Pool: prefer well-known settlements (with persons); fall back to all
+      // ── Try curated game_personalities table first ─────────────────────────
+      const { data: curated } = await supabaseClient
+        .from('game_personalities')
+        .select('*')
+        .order('id', { ascending: true });
+
+      if (curated && curated.length > 0) {
+        // Pick today's entry deterministically
+        const entry = curated[seed % curated.length];
+
+        // Fetch person record for enrichment
+        const { data: personRows } = await supabaseClient
+          .from('persons')
+          .select('*')
+          .eq('id', entry.person_id)
+          .limit(1);
+
+        const basePersonRow = personRows?.[0];
+        let person = basePersonRow ? (await enrichBatch([basePersonRow]))[0] : null;
+
+        if (!person?.image && basePersonRow) {
+          person = { ...basePersonRow, score: calcScore(basePersonRow) };
+        }
+
+        if (person) {
+          const options = seededShuffle(
+            [entry.correct_answer, entry.wrong_answer_1, entry.wrong_answer_2, entry.wrong_answer_3],
+            seed + 777
+          );
+
+          const data = {
+            date: dateStr,
+            person,
+            correctAnswer: entry.correct_answer,
+            options,
+            answered: false,
+            selectedAnswer: null,
+            isCorrect: null,
+          };
+
+          try { localStorage.setItem(`bamakor-game-v1-${dateStr}`, JSON.stringify(data)); } catch {}
+          setGameData(data);
+          return;
+        }
+      }
+
+      // ── Fallback: auto-select from locations pool ──────────────────────────
       const withCounts = customLocations.filter(loc => (locationCounts.get(loc.name) || 0) >= 5);
       const pool = withCounts.length >= 20 ? withCounts : customLocations.filter(loc => loc.id);
-
-      // Pick today's settlement
       const settlement = pool[seed % pool.length];
 
-      // Fetch top persons for that settlement
       const base = { ascending: false };
       const { data: rawPersons } = await supabaseClient
         .from('persons')
@@ -437,15 +480,11 @@ const App = () => {
 
       if (!rawPersons || rawPersons.length === 0) { setGameLoading(false); return; }
 
-      // Enrich to get images + descriptions
       const enriched = await enrichBatch(rawPersons.slice(0, 10));
       const withImage = enriched.filter(p => p.image);
       if (withImage.length === 0) { setGameLoading(false); return; }
 
-      // Pick person deterministically
       const person = withImage[seed % withImage.length];
-
-      // 3 wrong answers: well-known settlements different from correct one
       const wrongPool = pool.filter(loc => loc.name !== settlement.name);
       const wrongPicks = seededPick(wrongPool, 3, seed + 999);
       const options = seededShuffle([settlement.name, ...wrongPicks.map(l => l.name)], seed + 777);
