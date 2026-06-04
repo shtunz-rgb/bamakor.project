@@ -120,6 +120,10 @@ function AdminDashboard({ supabase }) {
     if (!selectedPerson) { setSaveMsg('בחר אישיות תחילה'); return; }
     if (!correctAnswer.trim()) { setSaveMsg('חסרה תשובה נכונה'); return; }
     if (wrongAnswers.some(w => !w.trim())) { setSaveMsg('יש למלא 3 תשובות שגויות'); return; }
+    if (entries.some(e => e.person_id === selectedPerson.id)) {
+      setSaveMsg(`${selectedPerson.full_name} כבר קיים/ת ברשימה`);
+      return;
+    }
 
     setSaving(true);
     setSaveMsg('');
