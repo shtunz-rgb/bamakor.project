@@ -107,9 +107,14 @@ function AdminDashboard({ supabase }) {
     setSelectedPerson(person);
     setSearchQuery(person.full_name);
     setSearchResults([]);
+    if (entries.some(e => e.person_id === person.id)) {
+      setSaveMsg(`${person.full_name} כבר קיים/ת ברשימה`);
+      return;
+    }
+    setSaveMsg('');
     // Auto-fill correct answer
     const bp = person.birth_place_by_wikidata || person.birth_place_raw || '';
-    setCorrectAnswer(bp.replace(/,.*/, '').trim()); // take first segment before comma
+    setCorrectAnswer(bp.replace(/,.*/, '').trim());
   };
 
   const handleWrongAnswer = (i, val) => {
