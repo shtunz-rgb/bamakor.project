@@ -126,7 +126,7 @@ function AdminDashboard({ supabase }) {
   const handleSave = async () => {
     if (!selectedPerson) { setSaveMsg('בחר אישיות תחילה'); return; }
     if (!correctAnswer.trim()) { setSaveMsg('חסרה תשובה נכונה'); return; }
-    if (wrongAnswers.some(w => !w.trim())) { setSaveMsg('יש למלא 3 תשובות שגויות'); return; }
+    // Wrong answers are optional — null values are filled via edit later
     if (entries.some(e => e.person_id === selectedPerson.id)) {
       setSaveMsg(`${selectedPerson.full_name} כבר קיים/ת ברשימה`);
       return;
@@ -139,9 +139,9 @@ function AdminDashboard({ supabase }) {
       full_name: selectedPerson.full_name,
       wikidata_id: selectedPerson.wikidata_id,
       correct_answer: correctAnswer.trim(),
-      wrong_answer_1: wrongAnswers[0].trim(),
-      wrong_answer_2: wrongAnswers[1].trim(),
-      wrong_answer_3: wrongAnswers[2].trim(),
+      wrong_answer_1: wrongAnswers[0].trim() || null,
+      wrong_answer_2: wrongAnswers[1].trim() || null,
+      wrong_answer_3: wrongAnswers[2].trim() || null,
       difficulty,
     });
 

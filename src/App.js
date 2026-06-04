@@ -442,10 +442,17 @@ const App = () => {
         }
 
         if (person) {
-          const options = seededShuffle(
-            [entry.correct_answer, entry.wrong_answer_1, entry.wrong_answer_2, entry.wrong_answer_3],
-            seed + 777
-          );
+          // Use curated wrong answers if filled; otherwise auto-generate from pool
+          let wrongThree;
+          if (entry.wrong_answer_1 && entry.wrong_answer_2 && entry.wrong_answer_3) {
+            wrongThree = [entry.wrong_answer_1, entry.wrong_answer_2, entry.wrong_answer_3];
+          } else {
+            const withCounts = customLocations.filter(loc => (locationCounts.get(loc.name) || 0) >= 5);
+            const pool = withCounts.length >= 20 ? withCounts : customLocations.filter(loc => loc.id);
+            const wrongPool = pool.filter(loc => loc.name !== entry.correct_answer);
+            wrongThree = seededPick(wrongPool, 3, seed + 999).map(l => l.name);
+          }
+          const options = seededShuffle([entry.correct_answer, ...wrongThree], seed + 777);
 
           const data = {
             date: dateStr,
