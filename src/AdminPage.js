@@ -71,6 +71,8 @@ function AdminDashboard({ supabase }) {
   // Existing entries
   const [entries, setEntries] = useState([]);
   const [entriesLoading, setEntriesLoading] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editFields, setEditFields] = useState({});
 
   const loadEntries = async () => {
     if (!supabase) return;
@@ -150,6 +152,29 @@ function AdminDashboard({ supabase }) {
       loadEntries();
     }
     setSaving(false);
+  };
+
+  const startEdit = (e) => {
+    setEditingId(e.id);
+    setEditFields({
+      correct_answer: e.correct_answer,
+      wrong_answer_1: e.wrong_answer_1,
+      wrong_answer_2: e.wrong_answer_2,
+      wrong_answer_3: e.wrong_answer_3,
+      difficulty: e.difficulty,
+    });
+  };
+
+  const handleUpdate = async (id) => {
+    if (!editFields.correct_answer.trim() ||
+        !editFields.wrong_answer_1.trim() ||
+        !editFields.wrong_answer_2.trim() ||
+        !editFields.wrong_answer_3.trim()) {
+      return;
+    }
+    await supabase.from('game_personalities').update(editFields).eq('id', id);
+    setEditingId(null);
+    loadEntries();
   };
 
   const handleDelete = async (id) => {
@@ -293,28 +318,85 @@ function AdminDashboard({ supabase }) {
                 {entries.map(e => (
                   <div
                     key={e.id}
-                    className="bg-slate-700/60 rounded-xl px-4 py-3 border border-slate-600/50 flex items-start justify-between gap-3"
+                    className={`rounded-xl border transition-colors ${editingId === e.id ? 'bg-slate-700 border-indigo-500 px-4 py-3' : 'bg-slate-700/60 border-slate-600/50 px-4 py-3'}`}
                   >
-                    <div className="min-w-0">
-                      <div className="font-bold text-sm truncate">{e.full_name}</div>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className="text-green-400 text-xs">{e.correct_answer}</span>
-                        <span className="text-slate-500 text-xs">|</span>
-                        <span className="text-red-400 text-xs">{e.wrong_answer_1}</span>
-                        <span className="text-red-400 text-xs">{e.wrong_answer_2}</span>
-                        <span className="text-red-400 text-xs">{e.wrong_answer_3}</span>
+                    {editingId === e.id ? (
+                      <div className="flex flex-col gap-2">
+                        <div className="font-bold text-sm mb-1">{e.full_name}</div>
+                        <input
+                          value={editFields.correct_answer}
+                          onChange={ev => setEditFields(f => ({ ...f, correct_answer: ev.target.value }))}
+                          placeholder="תשובה נכונה"
+                          className="w-full bg-slate-800 text-green-300 rounded-lg px-3 py-1.5 text-sm border border-green-800/50 focus:outline-none focus:border-green-500"
+                        />
+                        {['wrong_answer_1', 'wrong_answer_2', 'wrong_answer_3'].map((key, i) => (
+                          <input
+                            key={key}
+                            value={editFields[key]}
+                            onChange={ev => setEditFields(f => ({ ...f, [key]: ev.target.value }))}
+                            placeholder={`תשובה שגויה ${i + 1}`}
+                            className="w-full bg-slate-800 text-red-300 rounded-lg px-3 py-1.5 text-sm border border-red-900/50 focus:outline-none focus:border-red-500"
+                          />
+                        ))}
+                        <div className="flex gap-1.5 mt-1">
+                          {DIFFICULTIES.map(d => (
+                            <button
+                              key={d}
+                              onClick={() => setEditFields(f => ({ ...f, difficulty: d }))}
+                              className={`flex-1 py-1 rounded-lg text-xs font-bold border transition-all ${editFields.difficulty === d ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-700 border-slate-600 text-slate-400 hover:border-indigo-500'}`}
+                            >
+                              {d}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="flex gap-2 mt-1">
+                          <button
+                            onClick={() => handleUpdate(e.id)}
+                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg py-1.5 text-sm font-bold transition-all"
+                          >
+                            שמור
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            className="flex-1 bg-slate-600 hover:bg-slate-500 text-white rounded-lg py-1.5 text-sm font-bold transition-all"
+                          >
+                            ביטול
+                          </button>
+                        </div>
                       </div>
-                      <div className="text-slate-500 text-xs mt-0.5">
-                        קושי: {e.difficulty} · {DIFFICULTY_LABELS[e.difficulty]}
+                    ) : (
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="font-bold text-sm truncate">{e.full_name}</div>
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className="text-green-400 text-xs">{e.correct_answer}</span>
+                            <span className="text-slate-500 text-xs">|</span>
+                            <span className="text-red-400 text-xs">{e.wrong_answer_1}</span>
+                            <span className="text-red-400 text-xs">{e.wrong_answer_2}</span>
+                            <span className="text-red-400 text-xs">{e.wrong_answer_3}</span>
+                          </div>
+                          <div className="text-slate-500 text-xs mt-0.5">
+                            קושי: {e.difficulty} · {DIFFICULTY_LABELS[e.difficulty]}
+                          </div>
+                        </div>
+                        <div className="flex gap-1.5 shrink-0 mt-0.5">
+                          <button
+                            onClick={() => startEdit(e)}
+                            className="text-slate-400 hover:text-indigo-400 transition-colors text-sm leading-none px-1"
+                            title="ערוך"
+                          >
+                            ✎
+                          </button>
+                          <button
+                            onClick={() => handleDelete(e.id)}
+                            className="text-slate-500 hover:text-red-400 transition-colors text-lg leading-none"
+                            title="מחק"
+                          >
+                            ×
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                    <button
-                      onClick={() => handleDelete(e.id)}
-                      className="shrink-0 text-slate-500 hover:text-red-400 transition-colors text-lg leading-none mt-0.5"
-                      title="מחק"
-                    >
-                      ×
-                    </button>
+                    )}
                   </div>
                 ))}
               </div>
