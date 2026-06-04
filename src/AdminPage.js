@@ -233,9 +233,15 @@ function AdminDashboard({ supabase }) {
             </div>
 
             {selectedPerson && (
-              <div className="bg-indigo-900/40 border border-indigo-700 rounded-xl px-4 py-2 mb-4 text-sm">
+              <div className="bg-indigo-900/40 border border-indigo-700 rounded-xl px-4 py-2 mb-1 text-sm">
                 <span className="text-indigo-300 font-bold">{selectedPerson.full_name}</span>
                 <span className="text-slate-400 mr-2">#{selectedPerson.id}</span>
+              </div>
+            )}
+            {selectedPerson && entries.some(e => e.person_id === selectedPerson.id) && (
+              <div className="flex items-center gap-2 bg-amber-900/30 border border-amber-700/50 rounded-xl px-3 py-2 mb-3 text-amber-300 text-xs font-medium">
+                <span>⚠️</span>
+                <span>{selectedPerson.full_name} כבר קיים/ת ברשימה</span>
               </div>
             )}
 
