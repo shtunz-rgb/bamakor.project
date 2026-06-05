@@ -36,6 +36,24 @@ const calcScore = p => {
 
 const BATCH_SIZE = 20;
 
+// ── Streak helpers ────────────────────────────────────────────────────────────
+
+const STREAK_KEY = 'bamakor_streak_v1';
+
+const readStreak = () => {
+  try { return JSON.parse(localStorage.getItem(STREAK_KEY)) || { streak: 0, lastDate: null, lastCorrect: false }; }
+  catch { return { streak: 0, lastDate: null, lastCorrect: false }; }
+};
+
+const getActiveStreak = (data, todayStr) => {
+  if (!data.lastDate) return 0;
+  if (data.lastDate === todayStr) return data.streak;
+  const prev = new Date(todayStr);
+  prev.setDate(prev.getDate() - 1);
+  if (data.lastDate === prev.toISOString().slice(0, 10) && data.lastCorrect) return data.streak;
+  return 0;
+};
+
 // ── Daily game helpers ───────────────────────────────────────────────────────
 
 const getDailySeed = (dateStr) => {
@@ -94,6 +112,7 @@ const App = () => {
   const [showGameModal, setShowGameModal] = useState(false);
   const [gameData, setGameData] = useState(null);
   const [gameLoading, setGameLoading] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(0);
   const [contactMessage, setContactMessage] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [contactStatus, setContactStatus] = useState(null); // null | 'sending' | 'success' | 'error'
@@ -521,11 +540,17 @@ const App = () => {
     if (!gameData || gameData.answered) return;
     const isCorrect = answer === gameData.correctAnswer;
     const updated = { ...gameData, answered: true, selectedAnswer: answer, isCorrect };
-    try {
-      const dateStr = new Date().toISOString().slice(0, 10);
-      localStorage.setItem(`bamakor-game-v1-${dateStr}`, JSON.stringify(updated));
-    } catch {}
-    setGameData(updated);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    try { localStorage.setItem(`bamakor-game-v1-${dateStr}`, JSON.stringify(updated)); } catch {}
+
+    // Update streak
+    const prev = readStreak();
+    const active = getActiveStreak(prev, dateStr);
+    const newStreak = isCorrect ? active + 1 : 0;
+    try { localStorage.setItem(STREAK_KEY, JSON.stringify({ streak: newStreak, lastDate: dateStr, lastCorrect: isCorrect })); } catch {}
+    setCurrentStreak(newStreak);
+
+    setGameData({ ...updated, prevStreak: active });
   };
 
 
@@ -1027,7 +1052,7 @@ const App = () => {
           <button onClick={() => { setBookmarkDone(false); setShowBookmarkModal(true); }} title="שמור" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
           </button>
-          <button onClick={() => { setShowGameModal(true); setGameData(null); loadDailyGame(); }} title="משחקים" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
+          <button onClick={() => { const d = new Date().toISOString().slice(0,10); setCurrentStreak(getActiveStreak(readStreak(), d)); setShowGameModal(true); setGameData(null); loadDailyGame(); }} title="משחקים" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>
           </button>
           <button onClick={() => setShowContactModal(true)} title="כתבו לנו" className="w-9 h-9 flex items-center justify-center rounded-full border border-slate-200 text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all">
@@ -1265,6 +1290,13 @@ const App = () => {
                     )}
                   </div>
 
+                  {/* ── Active streak badge ── */}
+                  {currentStreak > 0 && !gameData.answered && (
+                    <div className="mx-5 mb-3 bg-amber-900/30 border border-amber-700/50 rounded-xl px-3 py-1.5 text-center">
+                      <span className="text-amber-300 text-xs font-bold">רצף: {currentStreak} {currentStreak === 1 ? 'יום' : 'ימים'} רצופים</span>
+                    </div>
+                  )}
+
                   {/* ── Question ── */}
                   <div className="px-5 pb-4 text-center">
                     <p className="text-white font-bold text-sm leading-snug">
@@ -1302,6 +1334,12 @@ const App = () => {
                       <p className="text-white font-bold text-sm">
                         {gameData.isCorrect ? '🎉 כל הכבוד! ענית נכון' : `😔 לא הפעם... התשובה: ${gameData.correctAnswer}`}
                       </p>
+                      {gameData.isCorrect && currentStreak > 1 && (
+                        <p className="text-amber-300 font-black text-base mt-1">{currentStreak} ימים רצופים!</p>
+                      )}
+                      {!gameData.isCorrect && (gameData.prevStreak || 0) > 0 && (
+                        <p className="text-slate-400 text-xs mt-1">הרצף של {gameData.prevStreak} ימים נשבר</p>
+                      )}
                       <p className="text-slate-400 text-xs mt-1 mb-3">חזרו מחר לשאלה הבאה</p>
                       <a
                         href={`https://wa.me/?text=${encodeURIComponent(
@@ -1464,7 +1502,7 @@ const App = () => {
           </svg>
         </button>
         <button
-          onClick={() => { setShowGameModal(true); setGameData(null); loadDailyGame(); }}
+          onClick={() => { const d = new Date().toISOString().slice(0,10); setCurrentStreak(getActiveStreak(readStreak(), d)); setShowGameModal(true); setGameData(null); loadDailyGame(); }}
           title="משחקים"
           className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 shadow-md text-slate-500 hover:text-indigo-500 hover:border-indigo-300 transition-all"
         >
