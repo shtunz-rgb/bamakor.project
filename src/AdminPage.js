@@ -8,6 +8,17 @@ const ADMIN_KEY = process.env.REACT_APP_ADMIN_KEY;
 const DIFFICULTIES = [1, 2, 3, 4, 5];
 const DIFFICULTY_LABELS = { 1: 'קל מאוד', 2: 'קל', 3: 'בינוני', 4: 'קשה', 5: 'קשה מאוד' };
 
+const getDailySeed = (dateStr) => {
+  let h = 0;
+  for (let i = 0; i < dateStr.length; i++) h = (Math.imul(31, h) + dateStr.charCodeAt(i)) | 0;
+  return Math.abs(h);
+};
+
+const calcScore = (langs, words) => {
+  const base = Math.round((langs * 0.3) + ((words / 100) * 0.7));
+  return langs >= 80 ? base * 2 : base;
+};
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState('');
@@ -73,6 +84,8 @@ function AdminDashboard({ supabase }) {
   const [entriesLoading, setEntriesLoading] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [editFields, setEditFields] = useState({});
+  const [scoreMap, setScoreMap] = useState(new Map());   // person_id -> score
+  const [shownDates, setShownDates] = useState(new Map()); // entry id -> last shown date
 
   const loadEntries = async () => {
     if (!supabase) return;
@@ -80,12 +93,49 @@ function AdminDashboard({ supabase }) {
     const { data } = await supabase
       .from('game_personalities')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('id', { ascending: true });
     setEntries(data || []);
     setEntriesLoading(false);
   };
 
   useEffect(() => { loadEntries(); }, []);
+
+  // After entries load: fetch scores + compute shown dates
+  useEffect(() => {
+    if (entries.length === 0) return;
+
+    // ── Compute last-shown date for each entry ─────────────────────────────
+    // Game picks: entries[getDailySeed(date) % entries.length]  (id-asc order)
+    const dates = new Map();
+    const today = new Date();
+    for (let i = 0; i < 365; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().slice(0, 10);
+      const idx = getDailySeed(dateStr) % entries.length;
+      const entry = entries[idx]; // entries already sorted by id asc
+      if (!dates.has(entry.id)) dates.set(entry.id, dateStr);
+    }
+    setShownDates(dates);
+
+    // ── Fetch scores from persons table ───────────────────────────────────
+    const fetchScores = async () => {
+      const personIds = [...new Set(entries.map(e => e.person_id))];
+      const CHUNK = 500;
+      const allRows = [];
+      for (let i = 0; i < personIds.length; i += CHUNK) {
+        const { data } = await supabase
+          .from('persons')
+          .select('id, num_wiki_languages, wikipage_wordcount')
+          .in('id', personIds.slice(i, i + CHUNK));
+        if (data) allRows.push(...data);
+      }
+      const map = new Map();
+      allRows.forEach(p => map.set(p.id, calcScore(p.num_wiki_languages || 0, p.wikipage_wordcount || 0)));
+      setScoreMap(map);
+    };
+    fetchScores();
+  }, [entries]);
 
   // Debounced search
   useEffect(() => {
@@ -326,7 +376,7 @@ function AdminDashboard({ supabase }) {
               <div className="text-slate-500 text-center py-8">אין רשומות עדיין</div>
             ) : (
               <div className="flex flex-col gap-2 max-h-[520px] overflow-y-auto">
-                {entries.map(e => (
+                {[...entries].sort((a, b) => (scoreMap.get(b.person_id) || 0) - (scoreMap.get(a.person_id) || 0)).map(e => (
                   <div
                     key={e.id}
                     className={`rounded-xl border transition-colors ${editingId === e.id ? 'bg-slate-700 border-indigo-500 px-4 py-3' : 'bg-slate-700/60 border-slate-600/50 px-4 py-3'}`}
@@ -386,8 +436,14 @@ function AdminDashboard({ supabase }) {
                             <span className="text-red-400 text-xs">{e.wrong_answer_2}</span>
                             <span className="text-red-400 text-xs">{e.wrong_answer_3}</span>
                           </div>
-                          <div className="text-slate-500 text-xs mt-0.5">
-                            קושי: {e.difficulty} · {DIFFICULTY_LABELS[e.difficulty]}
+                          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                            <span className="text-slate-500 text-xs">קושי: {e.difficulty} · {DIFFICULTY_LABELS[e.difficulty]}</span>
+                            {scoreMap.has(e.person_id) && (
+                              <span className="text-indigo-400 text-xs font-bold">⚡ {scoreMap.get(e.person_id)}</span>
+                            )}
+                            {shownDates.has(e.id) && (
+                              <span className="text-slate-500 text-xs">· הוצג: {shownDates.get(e.id)}</span>
+                            )}
                           </div>
                         </div>
                         <div className="flex gap-1.5 shrink-0 mt-0.5">
