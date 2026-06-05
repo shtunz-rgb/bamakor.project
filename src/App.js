@@ -466,6 +466,8 @@ const App = () => {
 
           try { localStorage.setItem(`bamakor-game-v1-${dateStr}`, JSON.stringify(data)); } catch {}
           setGameData(data);
+          // Record the real shown date (fire-and-forget)
+          supabaseClient.from('game_personalities').update({ last_shown_date: dateStr }).eq('id', entry.id);
           return;
         }
       }

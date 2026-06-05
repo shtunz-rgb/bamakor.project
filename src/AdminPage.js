@@ -8,12 +8,6 @@ const ADMIN_KEY = process.env.REACT_APP_ADMIN_KEY;
 const DIFFICULTIES = [1, 2, 3, 4, 5];
 const DIFFICULTY_LABELS = { 1: 'קל מאוד', 2: 'קל', 3: 'בינוני', 4: 'קשה', 5: 'קשה מאוד' };
 
-const getDailySeed = (dateStr) => {
-  let h = 0;
-  for (let i = 0; i < dateStr.length; i++) h = (Math.imul(31, h) + dateStr.charCodeAt(i)) | 0;
-  return Math.abs(h);
-};
-
 const calcScore = (langs, words) => {
   const base = Math.round((langs * 0.3) + ((words / 100) * 0.7));
   return langs >= 80 ? base * 2 : base;
@@ -85,7 +79,6 @@ function AdminDashboard({ supabase }) {
   const [editingId, setEditingId] = useState(null);
   const [editFields, setEditFields] = useState({});
   const [scoreMap, setScoreMap] = useState(new Map());   // person_id -> score
-  const [shownDates, setShownDates] = useState(new Map()); // entry id -> last shown date
 
   const loadEntries = async () => {
     if (!supabase) return;
@@ -103,20 +96,6 @@ function AdminDashboard({ supabase }) {
   // After entries load: fetch scores + compute shown dates
   useEffect(() => {
     if (entries.length === 0) return;
-
-    // ── Compute last-shown date for each entry ─────────────────────────────
-    // Game picks: entries[getDailySeed(date) % entries.length]  (id-asc order)
-    const dates = new Map();
-    const today = new Date();
-    for (let i = 0; i < 365; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() - i);
-      const dateStr = d.toISOString().slice(0, 10);
-      const idx = getDailySeed(dateStr) % entries.length;
-      const entry = entries[idx]; // entries already sorted by id asc
-      if (!dates.has(entry.id)) dates.set(entry.id, dateStr);
-    }
-    setShownDates(dates);
 
     // ── Fetch scores from persons table ───────────────────────────────────
     const fetchScores = async () => {
@@ -441,9 +420,10 @@ function AdminDashboard({ supabase }) {
                             {scoreMap.has(e.person_id) && (
                               <span className="text-indigo-400 text-xs font-bold">⚡ {scoreMap.get(e.person_id)}</span>
                             )}
-                            {shownDates.has(e.id) && (
-                              <span className="text-slate-500 text-xs">· הוצג: {shownDates.get(e.id)}</span>
-                            )}
+                            {e.last_shown_date
+                              ? <span className="text-slate-500 text-xs">· הוצג: {e.last_shown_date}</span>
+                              : <span className="text-slate-600 text-xs">· טרם הוצג</span>
+                            }
                           </div>
                         </div>
                         <div className="flex gap-1.5 shrink-0 mt-0.5">
