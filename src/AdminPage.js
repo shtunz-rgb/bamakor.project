@@ -79,6 +79,8 @@ function AdminDashboard({ supabase }) {
   const [editingId, setEditingId] = useState(null);
   const [editFields, setEditFields] = useState({});
   const [scoreMap, setScoreMap] = useState(new Map());   // person_id -> score
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
 
   const loadEntries = async () => {
     if (!supabase) return;
@@ -91,7 +93,18 @@ function AdminDashboard({ supabase }) {
     setEntriesLoading(false);
   };
 
-  useEffect(() => { loadEntries(); }, []);
+  const loadUsers = async () => {
+    if (!supabase) return;
+    setUsersLoading(true);
+    const { data } = await supabase
+      .from('user_stats')
+      .select('*')
+      .order('last_seen_at', { ascending: false });
+    setUsers(data || []);
+    setUsersLoading(false);
+  };
+
+  useEffect(() => { loadEntries(); loadUsers(); }, []);
 
   // After entries load: fetch scores + compute shown dates
   useEffect(() => {
@@ -449,6 +462,72 @@ function AdminDashboard({ supabase }) {
               </div>
             )}
           </div>
+        </div>
+
+        {/* ── Users panel ── */}
+        <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 mt-8">
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-bold">משתמשים</h2>
+            <div className="flex items-center gap-3">
+              <span className="bg-slate-700 text-slate-300 text-xs font-bold px-2.5 py-1 rounded-lg">{users.length} משתמשים</span>
+              <span className="bg-indigo-900/50 text-indigo-300 text-xs font-bold px-2.5 py-1 rounded-lg">
+                {users.filter(u => u.current_streak > 1).length} עם רצף פעיל
+              </span>
+              <button onClick={loadUsers} className="text-slate-400 hover:text-white text-xs border border-slate-600 rounded-lg px-2.5 py-1 transition-colors">רענן</button>
+            </div>
+          </div>
+
+          {usersLoading ? (
+            <div className="text-slate-400 text-center py-8">טוען...</div>
+          ) : users.length === 0 ? (
+            <div className="text-slate-500 text-center py-8">אין משתמשים עדיין</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-right">
+                <thead>
+                  <tr className="border-b border-slate-700 text-slate-400 text-xs">
+                    <th className="pb-2 font-medium px-2">מזהה</th>
+                    <th className="pb-2 font-medium px-2">כניסה ראשונה</th>
+                    <th className="pb-2 font-medium px-2">כניסה אחרונה</th>
+                    <th className="pb-2 font-medium px-2">משחק ראשון</th>
+                    <th className="pb-2 font-medium px-2">משחק אחרון</th>
+                    <th className="pb-2 font-medium px-2 text-center">משחקים</th>
+                    <th className="pb-2 font-medium px-2 text-center">נכון</th>
+                    <th className="pb-2 font-medium px-2 text-center">רצף נוכחי</th>
+                    <th className="pb-2 font-medium px-2 text-center">רצף שיא</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(u => {
+                    const fmt = ts => ts ? new Date(ts).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'2-digit' }) : '—';
+                    return (
+                      <tr key={u.uid} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                        <td className="py-2 px-2 font-mono text-slate-400 text-xs">{u.uid.slice(0, 8)}…</td>
+                        <td className="py-2 px-2 text-slate-300 text-xs">{fmt(u.first_seen_at)}</td>
+                        <td className="py-2 px-2 text-slate-300 text-xs">{fmt(u.last_seen_at)}</td>
+                        <td className="py-2 px-2 text-slate-300 text-xs">{fmt(u.first_game_at)}</td>
+                        <td className="py-2 px-2 text-slate-300 text-xs">{fmt(u.last_game_at)}</td>
+                        <td className="py-2 px-2 text-center text-slate-300 text-xs">{u.total_games}</td>
+                        <td className="py-2 px-2 text-center text-green-400 text-xs font-bold">{u.total_correct}</td>
+                        <td className="py-2 px-2 text-center">
+                          {u.current_streak > 1
+                            ? <span className="bg-amber-900/40 text-amber-300 font-black text-xs px-2 py-0.5 rounded-lg">{u.current_streak}</span>
+                            : <span className="text-slate-500 text-xs">{u.current_streak}</span>
+                          }
+                        </td>
+                        <td className="py-2 px-2 text-center">
+                          {u.longest_streak > 1
+                            ? <span className="bg-indigo-900/40 text-indigo-300 font-black text-xs px-2 py-0.5 rounded-lg">{u.longest_streak}</span>
+                            : <span className="text-slate-500 text-xs">{u.longest_streak}</span>
+                          }
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

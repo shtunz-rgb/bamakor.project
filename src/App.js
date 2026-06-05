@@ -36,6 +36,21 @@ const calcScore = p => {
 
 const BATCH_SIZE = 20;
 
+// ── Anonymous user ID ─────────────────────────────────────────────────────────
+
+const getOrCreateUid = () => {
+  try {
+    let uid = localStorage.getItem('bamakor_uid');
+    if (!uid) {
+      uid = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+      localStorage.setItem('bamakor_uid', uid);
+    }
+    return uid;
+  } catch { return null; }
+};
+
 // ── Streak helpers ────────────────────────────────────────────────────────────
 
 const STREAK_KEY = 'bamakor_streak_v1';
@@ -132,6 +147,12 @@ const App = () => {
     return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }, []);
 
+  // Track site visit (fire-and-forget)
+  useEffect(() => {
+    if (!supabaseClient) return;
+    const uid = getOrCreateUid();
+    if (uid) supabaseClient.rpc('upsert_user_visit', { p_uid: uid });
+  }, [supabaseClient]);
 
   useEffect(() => {
     if (!mapRef.current || leafletMapRef.current) return;
@@ -547,8 +568,20 @@ const App = () => {
     const prev = readStreak();
     const active = getActiveStreak(prev, dateStr);
     const newStreak = isCorrect ? active + 1 : 0;
-    try { localStorage.setItem(STREAK_KEY, JSON.stringify({ streak: newStreak, lastDate: dateStr, lastCorrect: isCorrect })); } catch {}
+    const longestStreak = Math.max(prev.longestStreak || 0, newStreak);
+    try { localStorage.setItem(STREAK_KEY, JSON.stringify({ streak: newStreak, longestStreak, lastDate: dateStr, lastCorrect: isCorrect })); } catch {}
     setCurrentStreak(newStreak);
+
+    // Track to server (fire-and-forget)
+    const uid = getOrCreateUid();
+    if (uid && supabaseClient) {
+      supabaseClient.rpc('record_game_result', {
+        p_uid: uid,
+        p_correct: isCorrect,
+        p_new_streak: newStreak,
+        p_longest_streak: longestStreak,
+      });
+    }
 
     setGameData({ ...updated, prevStreak: active });
   };
@@ -719,6 +752,13 @@ const App = () => {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
+
+  // Track game open
+  useEffect(() => {
+    if (!showGameModal || !supabaseClient) return;
+    const uid = getOrCreateUid();
+    if (uid) supabaseClient.rpc('record_game_open', { p_uid: uid });
+  }, [showGameModal]);
 
   // Background: count persons per settlement for zoom-based marker filtering (mobile)
   useEffect(() => {
