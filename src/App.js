@@ -151,7 +151,8 @@ const App = () => {
   useEffect(() => {
     if (!supabaseClient) return;
     const uid = getOrCreateUid();
-    if (uid) supabaseClient.rpc('upsert_user_visit', { p_uid: uid });
+    if (uid) supabaseClient.rpc('upsert_user_visit', { p_uid: uid })
+      .then(({ error }) => { if (error) console.error('[tracking] upsert_user_visit:', error); });
   }, [supabaseClient]);
 
   useEffect(() => {
@@ -580,7 +581,7 @@ const App = () => {
         p_correct: isCorrect,
         p_new_streak: newStreak,
         p_longest_streak: longestStreak,
-      });
+      }).then(({ error }) => { if (error) console.error('[tracking] record_game_result:', error); });
     }
 
     setGameData({ ...updated, prevStreak: active });
@@ -757,7 +758,8 @@ const App = () => {
   useEffect(() => {
     if (!showGameModal || !supabaseClient) return;
     const uid = getOrCreateUid();
-    if (uid) supabaseClient.rpc('record_game_open', { p_uid: uid });
+    if (uid) supabaseClient.rpc('record_game_open', { p_uid: uid })
+      .then(({ error }) => { if (error) console.error('[tracking] record_game_open:', error); });
   }, [showGameModal]);
 
   // Background: count persons per settlement for zoom-based marker filtering (mobile)
