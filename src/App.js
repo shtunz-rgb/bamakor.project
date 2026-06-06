@@ -151,8 +151,11 @@ const App = () => {
   useEffect(() => {
     if (!supabaseClient) return;
     const uid = getOrCreateUid();
-    if (uid) supabaseClient.rpc('upsert_user_visit', { p_uid: uid })
-      .then(({ error }) => { if (error) console.error('[tracking] upsert_user_visit:', error); });
+    if (uid) {
+      console.log('[tracking] visit uid:', uid.slice(0, 8));
+      supabaseClient.rpc('upsert_user_visit', { p_uid: uid })
+        .then(({ error }) => console.log('[tracking] upsert_user_visit result:', error || 'ok'));
+    }
   }, [supabaseClient]);
 
   useEffect(() => {
