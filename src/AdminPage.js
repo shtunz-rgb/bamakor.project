@@ -100,8 +100,6 @@ function AdminDashboard({ supabase }) {
       .from('user_stats')
       .select('*')
       .order('last_seen_at', { ascending: false });
-    if (error) console.error('[admin] loadUsers error:', error);
-    console.log('[admin] loadUsers data:', data);
     setUsers(data || []);
     setUsersLoading(false);
   };

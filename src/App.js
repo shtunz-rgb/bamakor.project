@@ -151,11 +151,7 @@ const App = () => {
   useEffect(() => {
     if (!supabaseClient) return;
     const uid = getOrCreateUid();
-    if (uid) {
-      console.log('[tracking] visit uid:', uid.slice(0, 8));
-      supabaseClient.rpc('upsert_user_visit', { p_uid: uid })
-        .then(({ error }) => console.log('[tracking] upsert_user_visit result:', error || 'ok'));
-    }
+    if (uid) supabaseClient.rpc('upsert_user_visit', { p_uid: uid });
   }, [supabaseClient]);
 
   useEffect(() => {
@@ -584,7 +580,7 @@ const App = () => {
         p_correct: isCorrect,
         p_new_streak: newStreak,
         p_longest_streak: longestStreak,
-      }).then(({ error }) => { if (error) console.error('[tracking] record_game_result:', error); });
+      });
     }
 
     setGameData({ ...updated, prevStreak: active });
@@ -761,8 +757,7 @@ const App = () => {
   useEffect(() => {
     if (!showGameModal || !supabaseClient) return;
     const uid = getOrCreateUid();
-    if (uid) supabaseClient.rpc('record_game_open', { p_uid: uid })
-      .then(({ error }) => { if (error) console.error('[tracking] record_game_open:', error); });
+    if (uid) supabaseClient.rpc('record_game_open', { p_uid: uid });
   }, [showGameModal]);
 
   // Background: count persons per settlement for zoom-based marker filtering (mobile)
@@ -1379,8 +1374,10 @@ const App = () => {
                       <p className="text-white font-bold text-sm">
                         {gameData.isCorrect ? '🎉 כל הכבוד! ענית נכון' : `😔 לא הפעם... התשובה: ${gameData.correctAnswer}`}
                       </p>
-                      {gameData.isCorrect && currentStreak > 1 && (
-                        <p className="text-amber-300 font-black text-base mt-1">{currentStreak} ימים רצופים!</p>
+                      {gameData.isCorrect && currentStreak >= 1 && (
+                        <p className="text-amber-300 font-black text-base mt-1">
+                          {currentStreak === 1 ? 'יום ראשון! חזרו מחר להמשיך את הרצף' : `${currentStreak} ימים רצופים!`}
+                        </p>
                       )}
                       {!gameData.isCorrect && (gameData.prevStreak || 0) > 0 && (
                         <p className="text-slate-400 text-xs mt-1">הרצף של {gameData.prevStreak} ימים נשבר</p>
