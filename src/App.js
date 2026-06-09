@@ -458,9 +458,13 @@ const App = () => {
       const seed = getDailySeed(dateStr);
 
       // ── Try curated game_personalities table first ─────────────────────────
+      // Only pick entries where all 3 wrong answers have been manually filled
       const { data: curated } = await supabaseClient
         .from('game_personalities')
         .select('*')
+        .not('wrong_answer_1', 'is', null)
+        .not('wrong_answer_2', 'is', null)
+        .not('wrong_answer_3', 'is', null)
         .order('id', { ascending: true });
 
       if (curated && curated.length > 0) {
