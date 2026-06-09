@@ -458,14 +458,21 @@ const App = () => {
       const seed = getDailySeed(dateStr);
 
       // ── Try curated game_personalities table first ─────────────────────────
-      // Only pick entries where all 3 wrong answers have been manually filled
-      const { data: curated } = await supabaseClient
+      // Prefer entries with all 3 wrong answers manually filled;
+      // fall back to full game_personalities list (auto-generate wrong answers)
+      const { data: filledEntries } = await supabaseClient
         .from('game_personalities')
         .select('*')
         .not('wrong_answer_1', 'is', null)
         .not('wrong_answer_2', 'is', null)
         .not('wrong_answer_3', 'is', null)
         .order('id', { ascending: true });
+
+      const { data: allEntries } = (!filledEntries || filledEntries.length === 0)
+        ? await supabaseClient.from('game_personalities').select('*').order('id', { ascending: true })
+        : { data: null };
+
+      const curated = (filledEntries && filledEntries.length > 0) ? filledEntries : (allEntries || []);
 
       if (curated && curated.length > 0) {
         // Pick today's entry deterministically
