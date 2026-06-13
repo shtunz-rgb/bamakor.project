@@ -583,18 +583,15 @@ const App = () => {
     try { localStorage.setItem(STREAK_KEY, JSON.stringify({ streak: newStreak, longestStreak, lastDate: dateStr, lastCorrect: isCorrect })); } catch {}
     setCurrentStreak(newStreak);
 
-    // Track to server
+    // Track to server (fire-and-forget)
     const uid = getOrCreateUid();
-    console.log('[tracking] record_game_result uid:', uid?.slice(0,8), 'streak:', newStreak);
     if (uid && supabaseClient) {
       supabaseClient.rpc('record_game_result', {
         p_uid: uid,
         p_correct: isCorrect,
         p_new_streak: newStreak,
         p_longest_streak: longestStreak,
-      }).then(({ error }) => console.log('[tracking] record_game_result:', error || 'ok'));
-    } else {
-      console.warn('[tracking] skipped — uid:', uid, 'client:', !!supabaseClient);
+      });
     }
 
     setGameData({ ...updated, prevStreak: active });
