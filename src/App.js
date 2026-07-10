@@ -458,25 +458,25 @@ const App = () => {
       const seed = getDailySeed(dateStr);
 
       // ── Try curated game_personalities table first ─────────────────────────
-      // Prefer entries with all 3 wrong answers manually filled;
-      // fall back to full game_personalities list (auto-generate wrong answers)
-      const { data: filledEntries } = await supabaseClient
+      // Pool includes every entry; ones missing manually-curated wrong answers
+      // get them auto-generated below (per entry).
+      const { data: allEntries } = await supabaseClient
         .from('game_personalities')
         .select('*')
-        .not('wrong_answer_1', 'is', null)
-        .not('wrong_answer_2', 'is', null)
-        .not('wrong_answer_3', 'is', null)
         .order('id', { ascending: true });
 
-      const { data: allEntries } = (!filledEntries || filledEntries.length === 0)
-        ? await supabaseClient.from('game_personalities').select('*').order('id', { ascending: true })
-        : { data: null };
-
-      const curated = (filledEntries && filledEntries.length > 0) ? filledEntries : (allEntries || []);
+      const curated = allEntries || [];
 
       if (curated && curated.length > 0) {
-        // Pick today's entry deterministically
-        const entry = curated[seed % curated.length];
+        // Pick the entry shown longest ago (never-shown first) so the full
+        // pool cycles before anything repeats, instead of a fresh random pick each day.
+        const leastRecentlyShown = [...curated].sort((a, b) => {
+          const da = a.last_shown_date || '';
+          const db = b.last_shown_date || '';
+          if (da !== db) return da < db ? -1 : 1;
+          return a.id - b.id;
+        });
+        const entry = leastRecentlyShown[0];
 
         // Fetch person record for enrichment
         const { data: personRows } = await supabaseClient
