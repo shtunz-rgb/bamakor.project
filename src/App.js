@@ -172,8 +172,12 @@ const App = () => {
         leafletMapRef.current = map;
         map.on('zoomend', () => setMapZoom(map.getZoom()));
 
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-          attribution: '© OpenStreetMap contributors'
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+          attribution: 'Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap contributors',
+          maxNativeZoom: 16
+        }).addTo(map);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+          maxNativeZoom: 16
         }).addTo(map);
 
         renderMarkers();
