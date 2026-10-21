@@ -59,7 +59,7 @@ Set these in Vercel under **Project → Settings → Environment Variables**, an
 
 ## Data
 
-All data lives in a single Supabase project (`jbbyzzybclrpxpdledic`). **The table definitions, database functions and data exist only in Supabase**: the repo has no schema file and Supabase has no backups configured.
+All data lives in a single Supabase project (`jbbyzzybclrpxpdledic`, region `ap-south-1`). The full structure, including tables, functions and security rules, is in [`supabase/schema.sql`](supabase/schema.sql). It contains no data; see [Backups](#backups) for that.
 
 ### Tables
 
@@ -75,11 +75,31 @@ All data lives in a single Supabase project (`jbbyzzybclrpxpdledic`). **The tabl
 **`user_stats`**: one row per anonymous browser ID (`bamakor_uid` in localStorage).
 `uid`, `first_seen_at`, `last_seen_at`, `first_game_at`, `last_game_at`, `current_streak`, `longest_streak`, `total_games`, `total_correct`
 
+**`system_state`**: a key/value table (`key`, `value`, `created_at`). The website code doesn't use it.
+
 ### Database functions (RPC)
 
 - `upsert_user_visit(p_uid)`: runs on every page load
 - `record_game_open(p_uid)`: runs when the daily game opens
 - `record_game_result(p_uid, p_correct, p_new_streak, p_longest_streak)`: runs when a daily-game answer is submitted
+
+## Backups
+
+Supabase's free plan has no downloadable backups, so take them yourself, ideally before any database change:
+
+```bash
+zsh scripts/backup-db.sh
+```
+
+The script asks for the **database password**, which is not your Supabase login or the anon key. You can reset it under Project Settings → Database without affecting the site. It writes to `~/Backups/bamakor/<date>/`:
+
+- `schema.sql`: structure only. Copy it into `supabase/schema.sql` when the structure changes.
+- `bamakor-full.dump`: everything. Restore it into a new project with `pg_restore --no-owner -d "<connection string>" bamakor-full.dump`.
+- `<table>.csv`: one file per table, readable in Excel or Numbers.
+
+Backups contain visitor data (`user_stats`), so **never commit them to this public repo**. Keep a second copy off the laptop.
+
+It needs `brew install postgresql@17`. The connection goes through the Supabase **shared pooler** on port 5432; the host and user are set at the top of the script.
 
 ## External services
 
@@ -100,6 +120,7 @@ If the site breaks and the code hasn't changed, start here.
 
 - **Supabase free tier pauses after about a week without traffic.** The project's domain then stops resolving and the site shows no data. To fix it, restore the project in the Supabase dashboard; no redeploy is needed. To prevent it, upgrade the plan or ping the API on a schedule. *(This happened in October 2026.)*
 - **The admin password is not secret.** `REACT_APP_ADMIN_KEY` is compiled into the public JavaScript and checked in the browser, so anyone can read it. Admin writes also go through the public anon key, so the database itself has no admin-only protection.
+- **`game_personalities` and `user_stats` are writable by anyone**: their `anon_all` rules allow every operation.
 - **`.env` is committed** despite being listed in `.gitignore`, because it was added before the ignore rule. The repo is public.
 - **The daily game's wrong-answer pool is built from only 1,000 `persons` rows.** The query that counts people per settlement (`fetchCounts` in `App.js`) doesn't page past Supabase's 1,000-row limit, so those counts are partial. Only the choice of wrong answers is affected.
 - **Tailwind is loaded from its CDN**, which the Tailwind team says not to do in production (it prints a console warning).
@@ -110,3 +131,5 @@ Notable changes that aren't obvious from the code. For everything else, see `git
 
 - **2026-10-20:** The map tiles were switched from CARTO to Esri Light Gray, because CARTO basemaps now require an API key and every tile showed "API KEY REQUIRED". Esri tiles stop at zoom 16, so `maxNativeZoom: 16` enlarges them beyond that.
 - **2026-10-20:** The Supabase project was found paused (its domain didn't resolve) and was restored.
+- **2026-10-20:** First full database backup taken. `supabase/schema.sql` and `scripts/backup-db.sh` added.
+- **2026-10-21:** Row-level security enabled on `persons`. Before this, anyone holding the public anon key could insert, edit or delete people. Its existing read-only rule now applies, so visitors can only read.
